@@ -336,19 +336,24 @@ plot(fig, filename='Split Violin Plot of Energy Data', validate=False)
 ###################### Feature Engineering and Selection ######################
 ###############################################################################
 
+features = data.copy()
+numeric_subset = data.select_dtypes('number')
+for col in numeric_subset.columns:
+    if col == 'score':
+        next
+    else:
+        numeric_subset['log_' + col] = np.log(numeric_subset[col])
+categorial_subset = data[['Borough', 'Largest Property Use Type']]
+categorial_subset = pd.get_dummies(categorial_subset)
+features = pd.concat([numeric_subset, categorial_subset], axis = 1)
+features.shape
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Remove Collinear Features
+plot_data = data[['Weather Normalized Site EUI (kBtu/ft²)','Site EUI (kBtu/ft²)']].dropna()
+plt.plot(plot_data['Site EUI (kBtu/ft²)'], 
+                   plot_data['Weather Normalized Site EUI (kBtu/ft²)'], 'bo')
+plt.xlabel('Site EUI (kBtu/ft²)')
+plt.ylabel('Weather Normalized Site EUI (kBtu/ft²)')
+plt.title('Weather Norm EUI vs Site EUI, R = %0.4f' % np.corrcoef(data[[
+        'Weather Normalized Site EUI (kBtu/ft²)', 'Site EUI (kBtu/ft²)']].dropna(),
+        rowvar=False)[0][1])

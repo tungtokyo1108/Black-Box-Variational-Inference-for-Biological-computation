@@ -4,6 +4,8 @@ Created on Mon Feb 11 11:10:30 2019
 
 @author: Tung1108
 @Reference: https://github.com/dipanjanS/practical-machine-learning-with-python/blob/master/bonus%20content/effective%20data%20visualization/Bonus%20-%20Effective%20Multi-dimensional%20Data%20Visualization.ipynb
+https://www.machinelearningplus.com/plots/top-50-matplotlib-visualizations-the-master-plots-python/
+
 """
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -15,6 +17,7 @@ from plotly import __version__
 from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 import plotly.graph_objs as go
 import plotly.figure_factory as ff
+import joypy
 
 ######################################################################################
 ############################ Load and merge datasets #################################
@@ -27,10 +30,10 @@ red_wine['wine_type'] = 'red'
 white_wine['wine_type'] = 'white'
 
 red_wine['quality_label'] = red_wine['quality'].apply(lambda value: 'low'
-                                                        if value <= 5 else 'medium'
-                                                        if value <= 7 else 'high')
+                                                      if value <= 5 else 'medium'
+                                                      if value <= 7 else 'high')
 red_wine['quality_label'] = pd.Categorical(red_wine['quality_label'],
-                                            categories=['low', 'median', 'high'])
+                                            categories=['low', 'medium', 'high'])
 white_wine['quality_label'] = white_wine['quality'].apply(lambda value: 'low'
                                                           if value <= 5 else 'medium'
                                                           if value <= 7 else 'high')
@@ -64,7 +67,19 @@ hs = round(wines[wines['quality_label'] == 'high'][subset_attributes_total].desc
 ls_ms_hs = pd.concat([ls,ms,hs], axis=1, keys=['Low Quality Wine', 'Medium Quality Wine', 
                                                  'High Quality Wine'])
 
-
+for col in wines :
+    red_average = wines[wines['wine_type']=='red'].mean()
+    white_average = wines[wines['wine_type']=='white'].mean()
+wine_average = pd.concat([red_average, white_average], axis=1, 
+                         keys=['Red Wine Average', 'White Wine Average'])
+wine_average = wine_average.T
+n_rows = len(wine_average)
+index = np.arange(len(wine_average.columns)) + 0.3
+bar_width = 0.4
+y_offset = np.zeros(len(wine_average.columns))
+p1 = plt.bar(red_average.index, red_average, bar_width)
+p2 = plt.bar(white_average.index, white_average, bar_width, bottom=red_average)
+    
 ########################### Visualizing one dimension ################################
 
 wines.hist(bins=15, color='steelblue', edgecolor='black',linewidth=1.0,
@@ -78,7 +93,7 @@ ax = fig.add_subplot(1,1,1)
 ax.set_xlabel("Sulphates")
 ax.set_ylabel("Frequency")
 ax.text(1.2, 800, r'$\mu$=' + str(round(wines['sulphates'].mean(),2)), fontsize=12)
-freq, bins, patches = ax.hist(wines['sulphates'], color='steelblue', bins=15,
+freq, bins, patches = ax.hist(wines['sulphates'], color='steelblue', bins=50,
                               edgecolor='black', linewidth=1)
 
 fig = plt.figure(figsize = (6,4))
@@ -88,6 +103,17 @@ ax1 = fig.add_subplot(1,1,1)
 ax1.set_xlabel("Sulphates")
 ax1.set_ylabel("Density")
 sns.kdeplot(wines['sulphates'], ax=ax1, shade=True, color='steelblue')
+
+wines_types = wines['wine_type'].value_counts() 
+red_wine_quality_types = red_wine['quality_label'].value_counts()
+white_wine_quality_types = white_wine['quality_label'].value_counts()
+fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(23,10))
+axes[0].pie(wines_types,shadow=True, autopct='%1.1f%%', labels=wines_types.index)
+axes[0].set_title('Percentage of Wine Read and White')
+axes[1].pie(red_wine_quality_types,shadow=True, autopct='%1.1f%%', labels=red_wine_quality_types.index)
+axes[1].set_title('Percentage of Quality of Red Wine')
+axes[2].pie(white_wine_quality_types,shadow=True, autopct='%1.1f%%', labels=white_wine_quality_types.index)
+axes[2].set_title('Percentage of Quality of White Wine')
 
 ########################### Visualizing two dimensions ###############################
 
@@ -119,6 +145,21 @@ plt.scatter(wines['sulphates'], wines['alcohol'],
 plt.xlabel('Sulphates')
 plt.ylabel('Alcohol')
 plt.title('Wine Sulphates - Alcohol Content', y=1.05)
+
+# Jittering with stripplot 
+# Use jittered plots to avoid overlapping of points 
+fig, ax = plt.subplots(figsize=(20,8), dpi=80)
+sns.stripplot(wines['sulphates'], wines['alcohol'], jitter=0.25, size=8, ax=ax, linewidth=.5)
+
+# To avoid the problem of points overlap is the increase the size of the dot 
+# depending on how many points lie in that spot.
+# Larger the size of the point more is the concentration of points around that 
+wines_counts = wines.groupby(['sulphates', 'alcohol']).size().reset_index(name='counts')
+fig, ax = plt.subplots(figsize=(16,10), dpi=80)
+sns.stripplot(wines_counts.sulphates, wines_counts.alcohol, size=wines_counts.counts*2, ax=ax)
+plt.title('Counts plot - Size of circle is bigger as more points overlaps', fontsize=22)
+plt.show()
+
 jp = sns.jointplot(x='sulphates', y='alcohol', data = wines, 
                    kind='reg', space=0, size=5, ratio=4)
 
@@ -207,9 +248,19 @@ ax = fig.add_subplot(1,1,1)
 ax.set_xlabel("Sulphates")
 ax.set_ylabel("Frequency")
 g = sns.FacetGrid(wines, hue='wine_type', palette={"red": "r", "white": "y"})
-g.map(sns.distplot, 'sulphates', kde=False, bins=15, ax=ax)
+g.map(sns.distplot, 'sulphates', kde=False, bins=35, ax=ax)
 ax.legend(title='Wine Type')
 plt.close(2)
+
+# Density Curves with Histogram 
+plt.figure(figsize=(8,5), dpi=80)
+sns.distplot(wines.loc[wines['wine_type'] == 'red', "sulphates"], color = "dodgerblue", 
+             label="red", hist_kws={'alpha':.7}, kde_kws={'linewidth':3})
+sns.distplot(wines.loc[wines['wine_type'] == 'white', "sulphates"], color = "orange", 
+             label="white", hist_kws={'alpha':.7}, kde_kws={'linewidth':3})
+plt.title('Density Plot of Wines by the Wine types', fontsize=12)
+plt.legend()
+plt.show()
 
 # Interact plot for the distribution of two variables 
 hist_data = [red_wine['sulphates'], white_wine['sulphates']]
@@ -217,7 +268,6 @@ group_labels = ['red_wine', 'white_wine']
 fig = ff.create_distplot(hist_data, group_labels, bin_size=.01, curve_type='kde')
 fig['layout'].update(title='Displot with Red-White wine', xaxis=dict(title='Sulphates'))
 plot(fig, filename='Displot with Red-White wine')
-
 
 # The bax plot of two variables
 f, (ax) = plt.subplots(1,1,figsize=(12,4))
@@ -282,12 +332,20 @@ fc = sns.factorplot(x="quality", hue="wine_type", col="quality_label",
                     palette={"red": "#FF9999", "white":"#FFE888"})
 
 jp = sns.pairplot(wines, x_vars=["sulphates"], y_vars=["alcohol"], size=4.5,
-                  hue="wine_type", palette="husl", markers=["o", "X"],
-                  plot_kws=dict(edgecolor="k", linewidth=0.5))
+                  hue="wine_type", palette="husl", markers=["o", "X"], height=5,aspect=1.6,
+                  plot_kws=dict(edgecolor="k", linewidth=0.7, s=60))
 
+# Joy plot allows the density curves of different group to overlap
+plt.figure(figsize=(8,6), dpi=80)
+fig, axes = joypy.joyplot(wines, column=['sulphates','alcohol'], by="wine_type", ylim='own',
+                          figsize=(8,6))
+plt.title('Joy Plot of Sulphates and alcohol by Wine types', fontsize = 12)
+plt.show()
+
+# Scatter plot with linear regression line of best fit
 lp = sns.lmplot(x='sulphates', y='alcohol', hue='wine_type', 
-                palette="husl", data=wines, fit_reg=True, legend=True,
-                scatter_kws=dict(edgecolor="k", linewidth=0.5))
+                palette="husl", height=5, aspect=1.6, data=wines, fit_reg=True, legend=True,
+                scatter_kws=dict(edgecolor="k", linewidth=0.7, s=60))
 
 ax=sns.kdeplot(white_wine['sulphates'], white_wine['alcohol'], cmap="YlOrBr",
                shade=True, shade_lowest=False)
@@ -348,32 +406,3 @@ fig = g.fig
 fig.subplots_adjust(top=0.8, wspace=0.3)
 fig.suptitle('Wine Type - Sulfur Dioxide - Quality - alcohol', fontsize=14)
 l = g.add_legend(title='Wine Quality Class')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

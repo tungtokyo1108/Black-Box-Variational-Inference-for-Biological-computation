@@ -290,6 +290,12 @@ pp =  sns.pairplot(wines[cols], hue='wine_type', height=1.8, aspect=1.8,
                    palette="husl", markers=["o","D"],
                    plot_kws=dict(edgecolor="black", linewidth=0.5))
 
+plt.figure(figsize=(10,8), dpi=80)
+pp1 = sns.pairplot(wines[cols], hue='wine_type', kind="scatter", plot_kws=dict(s=80, 
+                   edgecolor="white",linewidth=2.5))
+# pp2 = sns.pairplot(wines[cols], hue='wine_type', kind="reg")
+plt.show()
+
 fig = plt.figure(figsize=(8,6))
 ax = fig.add_subplot(111, projection='3d')
 xs = wines['residual sugar']

@@ -77,6 +77,7 @@ data.loc[data['state'] == 33, 'state'] = data['state'].mode().iloc[0]
 data.loc[data['build_year'] == 20052009, 'build_year'] = 2007
 
 ###############################################################################
+###############################################################################
 #################### Housing Internal Characteristic ##########################
 ###############################################################################
 
@@ -85,8 +86,9 @@ internal_chars = ['full_sq', 'life_sq', 'floor', 'max_floor', 'build_year',
 data_internal_chars = data[internal_chars]
 f, ax = plt.subplots(figsize=(10,6))
 corr_internal_chars = data_internal_chars.corr()
+cmap = sns.diverging_palette(250, 10, as_cmap=True)
 hm_internal_chars = sns.heatmap(round(corr_internal_chars,2), annot=True, ax=ax,
-                    cmap="coolwarm", fmt='.2f', annot_kws={"size": 12}, linewidths=.05)
+                    cmap=cmap, fmt='.2f', annot_kws={"size": 12}, linewidths=.05)
 f.subplots_adjust(top=0.93)
 t = f.suptitle('Housing Internal Characteristic Correlation Heatmap', fontsize=15)
 
@@ -192,8 +194,7 @@ import datetime
 import matplotlib.dates as mdates
 years = mdates.YearLocator()
 yearsFmt = mdates.DateFormatter('%Y')
-ts_vc = data['timestamp'].value_counts(sort=False)
-ts_vc = ts_vc.sort_index()
+ts_vc = data['timestamp'].value_counts().sort_index()
 f, ax = plt.subplots(figsize=(12,6))
 sns.barplot(x=ts_vc.index, y=ts_vc, ax=ax)
 ax.xaxis.set_major_locator(years)
@@ -205,40 +206,98 @@ ax.set_title("Sales Volumnn over time", fontsize=20)
 
 # Question: Is there a seasonal component to home prices in the course of a year 
 f, ax = plt.subplots(figsize=(12,8))
-ts_season = data.groupby(by=[data['timestamp'].dt.month])[['price_doc']].median()
-plt.plot(ts_season.index, ts_season, color='r')
+data['timestamp'] = pd.to_datetime(data['timestamp'])
+ts_season = data.groupby(by=[data.timestamp.dt.month])[['price_doc']].median()
+plt.plot(ts_season.index, ts_season, color='g')
+ax.set_xlabel("Months", fontsize=14)
+ax.set_ylabel("Price", fontsize=14)
+ax.set_title("A seasonal component to home price", fontsize=20)
 
+###############################################################################
+########################### Home State/Material ###############################
+###############################################################################
 
+f, ax = plt.subplots(figsize=(12,8))
+ind = data[data['state'].isnull()].index
+data['price_doc_log'] = np.log10(data['price_doc'])
+ax = sns.violinplot(x="state", y="price_doc_log", data=data.drop(ind), inner=None, alpha=0.6)
+ax = sns.stripplot(x="state", y="price_doc_log", data=data.drop(ind), jitter=True, 
+                   color=".8", alpha=0.1)
+ax.set_xlabel("State", fontsize=14)
+ax.set_ylabel("Log10(price)", fontsize=14)
+ax.set_title("Log10 of median price by state of home", fontsize=20)
+ind = data[data['state'].isnull()].index
+aver_price_state = data.drop(ind).groupby(by='state')[['price_doc']].mean()
+aver_price_state
 
+f, ax = plt.subplots(figsize=(12,8))
+ind = data[data['material'].isnull()].index
+data['price_doc_log'] = np.log10(data['price_doc'])
+ax = sns.violinplot(x="material", y = "price_doc_log", data=data.drop(ind), inner=None)
+ax = sns.stripplot(x="material", y = "price_doc_log", data=data.drop(ind), jitter=True,
+                   color=".8", alpha=0.1)
+ax.set_xlabel("Material", fontsize=14)
+ax.set_ylabel("Log10(price)", fontsize=14)
+ax.set_title("Distribution of price by build material", fontsize=20)
+ind = data[data['material'].isnull()].index
+aver_price_material = data.drop(ind).groupby(by='material')[['price_doc']].median()
+aver_price_material
 
+###############################################################################
+############################### Floor of Home #################################
+###############################################################################
 
+# Question: How does the floor feature compare with price? 
 
+col_floor = ['floor', 'max_floor', 'price_doc_log']
 
+def corr_func(x, y, **kwargs):
+    r = np.corrcoef(x,y)[0][1]
+    ax = plt.gca()
+    ax.annotate("r = {:.2f}".format(r), 
+                xy=(.2, .8), xycoords=ax.transAxes, size=20)
+grid = sns.PairGrid(data=data[col_floor], height=3)
+grid.map_upper(plt.scatter, color='green', alpha = 0.25)
+grid.map_diag(plt.hist, color='blue', edgecolor='black')
+grid.map_lower(corr_func)
+grid.map_lower(sns.kdeplot, cmap=plt.cm.Reds)
 
+pp = sns.pairplot(data[col_floor], height=1.8, aspect=1.8,
+             plot_kws=dict(edgecolor="k", linewidth=0.5),
+             diag_kind="kde", diag_kws=dict(shade=True))
+fig = pp.fig
+fig.subplots_adjust(top=0.93, wspace=0.3)
+t = fig.suptitle('Correlation among floor features and Price', fontsize=14)
 
+f, ax = plt.subplots(figsize=(12,8))
+plt.scatter(x=data['floor'], y=data['price_doc_log'], c = 'r', alpha=0.15)
+sns.regplot(x="floor", y="price_doc_log", data=data, scatter=False, truncate=True)
+ax.set_xlabel("Floor", fontsize=14)
+ax.set_ylabel("Log price", fontsize=14)
+ax.set_title("Price by floor of home", fontsize=20)
 
+f, ax = plt.subplots(figsize=(12,8))
+plt.scatter(x=data['max_floor'], y=data['price_doc_log'], c = 'r', alpha=0.15)
+sns.regplot(x="max_floor", y="price_doc_log", data=data, scatter=False, truncate=True)
+ax.set_xlabel("Max Floor", fontsize=14)
+ax.set_ylabel("Log Price", fontsize=14)
+ax.set_title("Price by max floor", fontsize=20)
 
+###############################################################################
+###############################################################################
 
+###############################################################################
+####################### Demographic Characteristics ###########################
+###############################################################################
 
+demo_var = ['area_m', 'raion_popul', 'full_all', 'male_f', 'female_f', 'young_all',
+            'young_female', 'work_all', 'work_male', 'work_female', 'price_doc']
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+data_demo_var = data[demo_var]
+f, ax = plt.subplots(figsize=(10,8))
+corr_demo_var= data_demo_var.corr()
+cmap = sns.diverging_palette(250, 10, as_cmap=True)
+hm_demo_var = sns.heatmap(round(corr_demo_var,2), annot=True, ax=ax, square=True,
+                 cmap=cmap, fmt='.2f', annot_kws={'size':12}, linewidth=.05)
+f.subplots_adjust(top=0.93)
+t = f.suptitle('Housing Price & Demographic Correlation Heatmap', fontsize=15)

@@ -1,0 +1,244 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar 11 14:58:46 2019
+
+Reference: https://www.kaggle.com/c/sberbank-russian-housing-market
+R code: https://www.kaggle.com/captcalculator/a-very-extensive-sberbank-exploratory-analysis
+
+@author: Tung1108
+"""
+
+import pandas as pd
+import numpy as np
+
+# No warnings about setting value on copy of slice
+pd.options.mode.chained_assignment = None
+
+# Display up to 60 columns of dataframe 
+pd.set_option('display.max_columns', 60)
+
+import matplotlib as mpl
+mpl.rc('axes', labelsize = 14)
+mpl.rc('xtick', labelsize = 12)
+mpl.rc('ytick', labelsize = 12)
+
+import matplotlib.pyplot as plt
+
+plt.rcParams['font.size'] = 24
+
+from plotly import __version__
+from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+import plotly.graph_objs as go
+import plotly.figure_factory as ff
+
+from IPython.core.pylabtools import figsize
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+
+data = pd.read_csv('train.csv')
+data.head()
+data.info()
+data.describe()
+
+###############################################################################
+############################### Missing Value #################################
+###############################################################################
+
+def missing_values_table(df):
+    mis_val = df.isnull().sum()
+    mis_val_percent = 100 * df.isnull().sum() / len(df)
+    mis_val_table = pd.concat([mis_val, mis_val_percent], axis=1)
+    mis_val_table_ren_columns = mis_val_table.rename(
+            columns={0 : 'Missing Values', 1 : '% of Total Values'})
+    mis_val_table_ren_columns = mis_val_table_ren_columns[
+            mis_val_table_ren_columns.iloc[:,1] != 0].sort_values(
+            '% of Total Values', ascending=False).round(1)
+    print("Your selected dataframe has " + str(df.shape[1]) + " columns.\n" 
+          "There are " + str(mis_val_table_ren_columns.shape[0]) + 
+          " columns that have missing values.")
+    return mis_val_table_ren_columns
+
+mis_value_tab = missing_values_table(data)
+fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(13,18))
+axes.barh(mis_value_tab.index, mis_value_tab['% of Total Values'], align='center')
+axes.set_xlabel("%", fontsize=20)
+axes.set_title('Percent missing data by feature', fontdict={'size':22})
+
+fig, ax = plt.subplots(figsize=(12,12))
+# plt.xticks(rotation='90')
+sns.barplot(x=mis_value_tab['% of Total Values'], y=mis_value_tab.index)
+ax.set(title='Percent missing data by feature', xlabel='% missing')
+
+###############################################################################
+########################### Data Quality Issues ###############################
+###############################################################################
+
+data.loc[data['state'] == 33, 'state'] = data['state'].mode().iloc[0]
+data.loc[data['build_year'] == 20052009, 'build_year'] = 2007
+
+###############################################################################
+#################### Housing Internal Characteristic ##########################
+###############################################################################
+
+internal_chars = ['full_sq', 'life_sq', 'floor', 'max_floor', 'build_year', 
+                  'num_room', 'kitch_sq', 'state', 'price_doc']
+data_internal_chars = data[internal_chars]
+f, ax = plt.subplots(figsize=(10,6))
+corr_internal_chars = data_internal_chars.corr()
+hm_internal_chars = sns.heatmap(round(corr_internal_chars,2), annot=True, ax=ax,
+                    cmap="coolwarm", fmt='.2f', annot_kws={"size": 12}, linewidths=.05)
+f.subplots_adjust(top=0.93)
+t = f.suptitle('Housing Internal Characteristic Correlation Heatmap', fontsize=15)
+
+###############################################################################
+#################### Area of Home and Number of Rooms #########################
+###############################################################################
+
+f, ax = plt.subplots(figsize=(10,6))
+plt.scatter(x=data['full_sq'], y=data['price_doc'], alpha=0.4)
+ax.set_xlabel("full_sq", fontsize=15)
+ax.set_ylabel("price_doc", fontsize=15)
+ax.set_title('Correlation between full_sq and price', fontdict={'size':20})
+
+f, ax = plt.subplots(figsize=(10,6))
+ind = data[data['full_sq'] > 2000].index
+plt.scatter(x=data.drop(ind)['full_sq'], y=data.drop(ind)['price_doc'], alpha=0.5,
+            edgecolors='w')
+ax.set_xlabel("full_sq", fontsize=15)
+ax.set_ylabel("price_doc", fontsize=15)
+ax.set_title('Correlation between full_sq and price', fontdict={'size':20})
+
+f, ax = plt.subplots(figsize=(10,6))
+ind = data[data['full_sq'] > 2000].index
+sns.stripplot(data.drop(ind)['full_sq'], data.drop(ind)['price_doc'],
+              jitter=0.25, size=8, ax=ax, linewidth=.5, alpha=0.5, edgecolor="gray")
+plt.title('Jittering with stripplot', fontsize=20)
+plt.show()
+
+# To avoid the problem of points overlap is the increase the size of the dot 
+# depending on how many points lie in that spot.
+# Larger the size of the point more is the concentration of points around that 
+ind = data[data['full_sq'] > 2000].index
+full_sq_counts = data.groupby([data.drop(ind)['full_sq'], data.drop(ind)['price_doc']]).size().reset_index(name='counts')
+f, ax = plt.subplots(figsize=(40,100))
+sns.stripplot(full_sq_counts.full_sq, full_sq_counts.price_doc, 
+              size=full_sq_counts.counts*2, ax=ax)
+plt.title('Counts plot - Size of circle is bigger as more points overlaps', fontsize=20)
+plt.show()
+
+ind = data[data['full_sq'] > 2000].index
+sns.jointplot(data.drop(ind)['full_sq'], y=data.drop(ind)['price_doc'], 
+                                 kind='reg', space=0, height=10, ratio=3)
+
+(data['life_sq'] > data['full_sq']).sum()
+
+f, ax = plt.subplots(figsize=(10,6))
+sns.countplot(x=data['num_room'])
+ax.set(title='Distribution of room count', xlabel='num_room')
+
+###############################################################################
+################################ Sale Types ###################################
+###############################################################################
+
+f, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(20,8))
+sns.distplot(data.loc[data['product_type'] == 'Investment', "price_doc"], color = "dodgerblue",
+             label="Investment", hist_kws={'alpha':.7}, kde_kws={'linewidth':3}, ax=ax1)
+ax1.set_ylabel('Density', fontsize=15)
+ax1.set_title('Investment', fontsize=15)
+sns.distplot(data.loc[data['product_type'] == 'OwnerOccupier', "price_doc"], color = "orange",
+             label="OwnerOccupier", hist_kws={'alpha':.7}, kde_kws={'linewidth':3}, ax=ax2)
+ax2.set_title('OwnerOccupier', fontsize=15)
+plt.show()
+
+data.groupby('product_type')['price_doc'].median()
+
+###############################################################################
+################################ Build Year ###################################
+###############################################################################
+
+f, ax = plt.subplots(figsize=(12,8))
+plt.xticks(rotation='90')
+ind = data[(data['build_year'] <= 1691) | (data['build_year'] >= 2018)].index
+data_build = data.drop(ind).sort_values(by=['build_year'])
+sns.countplot(x=data_build['build_year'])
+
+# Relationship between the build_year and price_doc
+# Group the data by year and take the mean of price_doc
+f, ax = plt.subplots(figsize=(12,6))
+price_year = data_build.groupby('build_year')[['build_year', 'price_doc']].mean()
+sns.regplot(x="build_year", y="price_doc", data=price_year, scatter=False, 
+            order=3, truncate=True)
+plt.plot(price_year['build_year'], price_year['price_doc'], color='r')
+ax.set_title('Mean Price by year of build', fontsize=14)
+
+# The relationship appears somewhat steady over time, especially after 1960. 
+# There is some volatility in the earlier years.
+# This is not a real effect but simple due to the sparseness of observations around 1950
+
+###############################################################################
+################################ Timestamp ####################################
+###############################################################################
+
+# Question: How does the price vary over the time horizon of the data set 
+
+f, ax = plt.subplots(figsize=(12,6))
+# data['timestamp'] = data['timestamp'].astype(float)
+price_ts = data.groupby('timestamp')[['price_doc']].mean()
+#sns.regplot(x=price_ts.index, y="price_doc", data=price_ts, scatter=False, 
+#            order=3, truncate=True)
+plt.plot(price_ts['price_doc'], color='r')
+
+import datetime
+import matplotlib.dates as mdates
+years = mdates.YearLocator()
+yearsFmt = mdates.DateFormatter('%Y')
+ts_vc = data['timestamp'].value_counts(sort=False)
+ts_vc = ts_vc.sort_index()
+f, ax = plt.subplots(figsize=(12,6))
+sns.barplot(x=ts_vc.index, y=ts_vc, ax=ax)
+ax.xaxis.set_major_locator(years)
+ax.xaxis.set_major_formatter(yearsFmt)
+#ax.set_xticklabels(labels=ts_vc.index, rotation=45, ha='right')
+ax.set_xlabel("Time", fontsize=14)
+ax.set_ylabel("Number of transaction", fontsize=14)
+ax.set_title("Sales Volumnn over time", fontsize=20)
+
+# Question: Is there a seasonal component to home prices in the course of a year 
+f, ax = plt.subplots(figsize=(12,8))
+ts_season = data.groupby(by=[data['timestamp'].dt.month])[['price_doc']].median()
+plt.plot(ts_season.index, ts_season, color='r')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

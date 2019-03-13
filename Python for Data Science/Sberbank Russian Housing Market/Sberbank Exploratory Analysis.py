@@ -86,7 +86,7 @@ internal_chars = ['full_sq', 'life_sq', 'floor', 'max_floor', 'build_year',
 data_internal_chars = data[internal_chars]
 f, ax = plt.subplots(figsize=(10,6))
 corr_internal_chars = data_internal_chars.corr()
-cmap = sns.diverging_palette(250, 10, as_cmap=True)
+cmap = sns.diverging_palette(220, 10, as_cmap=True)
 hm_internal_chars = sns.heatmap(round(corr_internal_chars,2), annot=True, ax=ax,
                     cmap=cmap, fmt='.2f', annot_kws={"size": 12}, linewidths=.05)
 f.subplots_adjust(top=0.93)
@@ -296,8 +296,56 @@ demo_var = ['area_m', 'raion_popul', 'full_all', 'male_f', 'female_f', 'young_al
 data_demo_var = data[demo_var]
 f, ax = plt.subplots(figsize=(10,8))
 corr_demo_var= data_demo_var.corr()
-cmap = sns.diverging_palette(250, 10, as_cmap=True)
+cmap = sns.diverging_palette(220, 10, as_cmap=True)
 hm_demo_var = sns.heatmap(round(corr_demo_var,2), annot=True, ax=ax, square=True,
                  cmap=cmap, fmt='.2f', annot_kws={'size':12}, linewidth=.05)
 f.subplots_adjust(top=0.93)
 t = f.suptitle('Housing Price & Demographic Correlation Heatmap', fontsize=15)
+
+# How many unique districts are there? 
+data['sub_area'].unique().shape[0]
+
+# Calculate the population density and check to see the correlation of density and price
+data['area_km'] = data['area_m'] / 1000000
+data['density'] = data['raion_popul'] / data['area_km']
+f, ax = plt.subplots(figsize=(12,8))
+demo_price = data.groupby(by='area_km')[['density','price_doc']].median()
+sns.regplot(x="density", y="price_doc", data=demo_price, scatter=True, 
+            order=5, truncate=True)
+ax.set_xlabel('Density', fontsize=14)
+ax.set_ylabel('Price', fontsize=14)
+ax.set_title('Median home price by raion population density', fontsize=20)
+
+'''
+These density numbers seem to make sense given that the population density of Moscow as
+whole is 8537/sq km. There are a few raions that seem to have a density of near zero,
+which seems odd. Home price does seem to increase with population density.
+
+'''
+# Question: how many sales transactions are in each district. 
+f, ax = plt.subplots(figsize=(10,20))
+trans_dis_raw = data['sub_area'].value_counts()
+trans_dis = pd.DataFrame({'sub_area': trans_dis_raw.index, 'count': trans_dis_raw.values})
+ax = sns.barplot(x="count", y="sub_area", data=trans_dis, orient="h")
+ax.set_title('Number of Transaction by District', fontsize=20)
+f.tight_layout()
+
+trans_dis_sort = list(trans_dis_raw[trans_dis_raw.values > 900].index)
+f, ax = plt.subplots(figsize=(12,8))
+for trans_type in trans_dis_sort:
+    subset = data[data['sub_area'] == trans_type]
+    sns.kdeplot(subset['price_doc'].dropna(), 
+                label=trans_type, shade=True, alpha=.25)
+ax.set_xlabel('Price',fontsize=14)
+ax.set_ylabel('Density', fontsize=14)
+ax.set_title('Density of Price by sub areas', fontsize=20)
+
+# Relationship between the share of the population that is working age and price
+f, ax = plt.subplots(figsize=(12,8))
+data['work_share'] = data['work_all']/data['raion_popul']
+share_price = data.groupby(by='sub_area')[['work_share', 'price_doc']].mean()
+sns.regplot(x="work_share", y="price_doc", data=share_price, scatter=True,
+            order=5, truncate=True)
+ax.set_xlabel('Work Shre', fontsize=14)
+ax.set_ylabel('Price', fontsize=14)
+ax.set_title('District mean home price by share of working age populaton', fontsize=20)

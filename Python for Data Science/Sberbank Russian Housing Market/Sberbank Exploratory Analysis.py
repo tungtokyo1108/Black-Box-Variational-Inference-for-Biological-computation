@@ -256,7 +256,7 @@ def corr_func(x, y, **kwargs):
     ax = plt.gca()
     ax.annotate("r = {:.2f}".format(r), 
                 xy=(.2, .8), xycoords=ax.transAxes, size=20)
-grid = sns.PairGrid(data=data[col_floor], height=3)
+grid = sns.PairGrid(data=data[col_floor].dropna(), height=3)
 grid.map_upper(plt.scatter, color='green', alpha = 0.25)
 grid.map_diag(plt.hist, color='blue', edgecolor='black')
 grid.map_lower(corr_func)
@@ -349,3 +349,124 @@ sns.regplot(x="work_share", y="price_doc", data=share_price, scatter=True,
 ax.set_xlabel('Work Shre', fontsize=14)
 ax.set_ylabel('Price', fontsize=14)
 ax.set_title('District mean home price by share of working age populaton', fontsize=20)
+
+###############################################################################
+###############################################################################
+
+###############################################################################
+########################### School Charateristics #############################
+###############################################################################
+
+school_var = ['children_preschool', 'preschool_quota', 'preschool_education_centers_raion',
+              'children_school', 'school_quota', 'school_education_centers_raion',
+              'school_education_centers_top_20_raion', 'university_top_20_raion',
+              'additional_education_raion', 'additional_education_km', 'university_km',
+              'price_doc']
+
+data_school_var = data[school_var]
+f, ax = plt.subplots(figsize=(12,8))
+corr_school_var = data_school_var.corr()
+cmap = sns.diverging_palette(220, 10, as_cmap=True)
+hm_school_var = sns.heatmap(round(corr_school_var,2), annot = True, ax=ax, square=True,
+                            cmap=cmap, fmt='.2f', annot_kws={'size':12}, linewidth=.05)
+f.subplots_adjust(top=0.93)
+t = f.suptitle('Housing Price & School Characteristics Heatmap', fontsize=20)
+
+f, ax = plt.subplots(figsize=(12,8))
+sns.stripplot(x="university_top_20_raion", y="price_doc", data=data, jitter=True,
+              alpha=.15, color=".8")
+sns.boxplot(x="university_top_20_raion", y="price_doc", data=data)
+ax.set_xlabel('University top 20 raion', fontsize=14)
+ax.set_ylabel('Price', fontsize=14)
+ax.set_title('Distribution of home price of top university in Raion', fontsize=20)
+
+'''
+Homes in a raion with 3 top 20 universities have the highest median home price, however, 
+it is fairly close among 0, 1, and 2. There are very few home with 3 top universities 
+
+'''
+
+# Question: How many districts there are with 3 universities 
+data.loc[data['university_top_20_raion'] == 3, "sub_area"].unique()
+
+
+###############################################################################
+###############################################################################
+
+###############################################################################
+################### Cultural/Recretinal Characteristics #######################
+###############################################################################
+
+cult_vars = ['sport_objects_raion', 'culture_objects_top_25_raion', 'shopping_centers_raion',
+             'park_km', 'fitness_km', 'swim_pool_km', 'ice_rink_km', 'stadium_km',
+             'basketball_km', 'shopping_centers_km', 'big_church_km', 'mosque_km',
+             'church_synagogue_km', 'theater_km', 'museum_km', 'exhibition_km',
+             'catering_km', 'price_doc']
+data_cult_vars = data[cult_vars]
+f, ax = plt.subplots(figsize=(20,15))
+corr_cult_vars = data_cult_vars.corr()
+cmap = sns.diverging_palette(220, 10, as_cmap=True)
+hm_cult_vars = sns.heatmap(round(corr_cult_vars,2), annot=True, ax=ax, square=True,
+                           cmap=cmap, fmt='.2f', annot_kws={'size':12}, linewidth=.05)
+f.subplots_adjust(top=0.93)
+t = f.suptitle('Housing Price & Cultural Characteristics', fontsize=25)
+
+f, ax = plt.subplots(figsize=(12,8))
+sport_price = data.groupby(by='sub_area')[['sport_objects_raion','price_doc']].median()
+sns.regplot(x="sport_objects_raion", y="price_doc", data=sport_price, scatter=True,
+            truncate=True)
+ax.set_xlabel('Sport Objects Raion', fontsize=14)
+ax.set_ylabel('Price', fontsize=14)
+ax.set_title('Median Raion home price of sports objects in Raion', fontsize=20)
+
+f, ax = plt.subplots(figsize=(12,8))
+cult_price_top = data.groupby(by='sub_area')[['culture_objects_top_25_raion', 'price_doc']].median()
+sns.regplot(x="culture_objects_top_25_raion", y="price_doc", data=cult_price_top, 
+            scatter=True, truncate=True)
+ax.set_xlabel('Cultre Objects top 25', fontsize=14)
+ax.set_ylabel('Price', fontsize=14)
+ax.set_title('Median Raion home price of culture objects in Raion', fontsize=20)
+data.groupby(by='culture_objects_top_25_raion')['price_doc'].median()
+
+f, ax = plt.subplots(figsize=(12,6))
+sns.stripplot(x="park_km", y="price_doc", data=data, jitter=0.25, 
+              size=8, ax=ax, alpha=0.25, linewidth=.5)
+ax.set_xlabel('Park', fontsize=14)
+ax.set_ylabel('Price', fontsize=14)
+ax.set_title('Home price by distance to nearest park', fontsize=20)
+
+f, ax = plt.subplots(figsize=(12,8))
+sns.regplot(x="park_km", y="price_doc", data=data, scatter=True, truncate=True,
+            scatter_kws={'color':'r', 'alpha': .15})
+ax.set_xlabel('Park', fontsize=14)
+ax.set_ylabel('Price', fontsize=14)
+ax.set_title('Home price by distance to nearest park', fontsize=20)
+
+
+###############################################################################
+###############################################################################
+
+###############################################################################
+########################## Infrastructure Features ############################
+###############################################################################
+
+infras_vars = ['nuclear_reactor_km', 'thermal_power_plant_km', 'power_transmission_line_km',
+               'incineration_km','water_treatment_km', 'incineration_km', 'railroad_station_walk_km',   
+               'railroad_station_walk_min', 'railroad_station_avto_km', 'railroad_station_avto_min',  
+               'public_transport_station_km', 'public_transport_station_min_walk', 'water_km',
+               'mkad_km', 'ttk_km', 'sadovoe_km','bulvar_ring_km', 'kremlin_km', 'price_doc']
+data_infras_vars = data[infras_vars]
+f, ax = plt.subplots(figsize=(15,10))
+corr_infras_vars = data_infras_vars.corr()
+cmap = sns.diverging_palette(220,10,as_cmap=True)
+hm_infras_vars = sns.heatmap(round(corr_infras_vars,2), annot=True, ax=ax, square=True,
+                             cmap=cmap, fmt='.2f', annot_kws={'size':10}, linewidth=.05)
+f.subplots_adjust(top=0.93)
+t = f.suptitle('Housing Price & Infrastructure Features', fontsize=20)
+
+f, ax = plt.subplots(figsize=(12,8))
+sns.regplot(x="kremlin_km", y="price_doc", data = data, scatter=True, truncate=True,
+            scatter_kws={'color':'r', 'alpha':0.15})
+ax.set_xlabel('Kremlin (km)', fontsize=14)
+ax.set_ylabel('Price', fontsize=14)
+ax.set_title('Home price by distance to Kremlin', fontsize=20)

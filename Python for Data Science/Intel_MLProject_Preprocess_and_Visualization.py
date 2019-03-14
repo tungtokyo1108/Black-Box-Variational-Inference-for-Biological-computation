@@ -105,6 +105,7 @@ layout = go.Layout(title='Energy Star Score Distributions',
 fig = go.Figure(data=data_iplot, layout=layout)
 plot(fig, filename='Energy Star Score Distributions')
 
+
 figsize(8,8)
 plt.hist(data['Site EUI (kBtu/ft²)'].dropna(), bins=20, edgecolor = 'black')
 plt.xlabel('Site EUI')
@@ -141,6 +142,7 @@ plot(fig, filename='Site EUI Distribution')
 
 types = data.dropna(subset=['score'])
 types = types['Largest Property Use Type'].value_counts()
+plt.pie(types, labels=types.index, autopct='%1.1f%%', shadow=True)
 types = list(types[types.values > 100].index)
 figsize(12,10)
 for b_type in types:
@@ -151,9 +153,19 @@ plt.xlabel('Energy Star Score', size=20)
 plt.ylabel('Density', size=20)
 plt.title('Density Plot of Energy Star Score by Building Type', size=28)
 
-
 boroughs = data.dropna(subset=['score'])
 boroughs = boroughs['Borough'].value_counts()
+y_pos = np.arange(len(boroughs.index))
+colors = np.repeat('g', 5-1).tolist()
+colors = ['blue'] + colors
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(23,8))
+axes[0].barh(boroughs.index, boroughs.values, color=colors, align='center')
+# axes[0].set_yticks(y_pos,y_pos)
+axes[0].set_ylabel('Number of')
+axes[0].set_title('Values of Boroughs')
+axes[1].pie(boroughs, labels=boroughs.index, autopct='%1.1f%%', shadow=True)
+axes[1].set_title('Percentage of Values of Boroughs')
+
 boroughs = list(boroughs[boroughs.values > 100].index)
 for borough in boroughs:
     subset = data[data['Borough'] == borough]
@@ -338,6 +350,15 @@ plot(fig, filename='Split Violin Plot of Energy Data', validate=False)
 
 features = data.copy()
 numeric_subset = data.select_dtypes('number')
+
+f, ax = plt.subplots(figsize=(20,16))
+numeric_corr = numeric_subset.corr()
+cmap = sns.diverging_palette(220,10, as_cmap=True)
+numeric_hm = sns.heatmap(round(numeric_corr,2), annot=True, ax=ax, cmap=cmap,
+                         fmt='.2f', linewidth=.05, annot_kws={'size':10})
+f.subplots_adjust(top=0.93)
+t = f.suptitle('Correlation HeatMap', fontsize=20)
+
 for col in numeric_subset.columns:
     if col == 'score':
         next
@@ -357,3 +378,79 @@ plt.ylabel('Weather Normalized Site EUI (kBtu/ft²)')
 plt.title('Weather Norm EUI vs Site EUI, R = %0.4f' % np.corrcoef(data[[
         'Weather Normalized Site EUI (kBtu/ft²)', 'Site EUI (kBtu/ft²)']].dropna(),
         rowvar=False)[0][1])
+
+def remove_collinear_feature(x, threshold):
+    '''
+    Objective: 
+        Remove collinear features in a dataframe with a correlation coefficient 
+        greater than the threshold. Removing collinear features can help a model
+        to generalize and improves the interpretability of the model
+        
+    Inputs:
+        threshold: any features with correlations greater than this value are removed
+        
+    Output:
+        dataframe that contains only the non-highly-collinear features 
+    
+    '''
+    # Do not want to remove correlations between Energy Star Score
+    y = x['score']
+    x = x.drop(columns = ['score'])
+    
+    corr_matrix = x.corr()
+    iters = range(len(corr_matrix.columns) - 1)
+    drop_cols = []
+    
+    for i in iters:
+        for j in range(i):
+            item = corr_matrix.iloc[j:(j+1), (i+1):(i+2)]
+            col = item.columns
+            row = item.index
+            val = abs(item.values)
+            
+            if val >= threshold:
+                drop_cols.append(col.values[0])
+    
+    drops = set(drop_cols)
+    x = x.drop(columns = drops)
+    x = x.drop(columns = ['Weather Normalized Site EUI (kBtu/ft²)',
+                          'Water Use (All Water Sources) (kgal)', 
+                          'log_Water Use (All Water Sources) (kgal)',
+                          'Largest Property Use Type - Gross Floor Area (ft²)'])
+    x['score'] = y
+    return x 
+
+features = remove_collinear_feature(features, 0.6)
+features = features.dropna(axis=1, how = 'all')
+features.shape 
+
+
+###############################################################################
+##################### Split Into Training and Testing Set #####################
+###############################################################################
+
+no_score = features[features['score'].isna()]
+score = features[features['score'].notnull()]
+print(no_score.shape)
+print(score.shape)
+
+features = score.drop(columns='score')
+targets = pd.DataFrame(score['score'])
+features = features.replace({np.inf: np.nan, -np.inf:np.nan})
+X, X_test, Y, Y_test = train_test_split(features, targets, test_size = 0.3, random_state = 42)
+print(X.shape)
+print(X_test.shape)
+print(Y.shape)
+print(Y_test.shape)
+
+def mae(y_true, y_pred):
+    return np.mean(abs(y_true - y_pred))
+baseline_guess = np.median(Y)
+print('The baseline guess is a score of %0.2f' % baseline_guess)
+print("Baseline Performance on the test set: MAE = %0.4f" % mae(Y_test, baseline_guess))
+
+no_score.to_csv('Energy_and_Water_Data_no_score.csv', index=False)
+X.to_csv('Energy_and_Water_Data_training_features.csv', index=False)
+X_test.to_csv('Energy_and_Water_Data_testing_features.csv', index=False)
+Y.to_csv('Energy_and_Water_Data_training_label.csv', index=False)
+Y_test.to_csv('Energy_and_Water_Data_testing_label.csv', index=False)

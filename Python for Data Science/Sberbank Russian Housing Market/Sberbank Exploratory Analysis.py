@@ -34,11 +34,44 @@ import plotly.figure_factory as ff
 from IPython.core.pylabtools import figsize
 import seaborn as sns
 from sklearn.model_selection import train_test_split
+from sklearn import model_selection, preprocessing
+import xgboost as xgb
 
 data = pd.read_csv('train.csv')
 data.head()
 data.info()
 data.describe()
+
+###############################################################################
+######################## Start with target variable ###########################
+###############################################################################
+
+f, ax = plt.subplots(figsize=(12,8))
+plt.scatter(range(data.shape[0]), np.sort(data.price_doc.values))
+plt.xlabel('Index', fontsize=12)
+plt.ylabel('Price', fontsize=12)
+
+f, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(12,12))
+sns.distplot(data.price_doc.values, bins=50, 
+                   kde_kws={"color":"r", "lw":3, "alpha":0.5},
+                   hist_kws={"linewidth":3, "alpha":0.5, "color":"b"}, ax=ax1)
+ax1.set_xlabel('Price', fontsize=15)
+ax1.set_ylabel('Density', fontsize=15)
+sns.distplot(np.log(data.price_doc.values), bins=50,
+                   kde_kws={"color":"r", "lw":3, "alpha":0.5},
+                   hist_kws={"linewidth":3, "alpha":0.5, "color":"b"}, ax=ax2)
+ax2.set_xlabel('Log Price', fontsize=15)
+ax2.set_ylabel('Density', fontsize=15)
+
+data['yearmonth'] = data['timestamp'].apply(lambda x: x[:4]+x[5:7])
+grouped = data.groupby('yearmonth')['price_doc'].aggregate(np.median).reset_index()
+f, ax = plt.subplots(figsize=(10,6))
+plt.xticks(rotation='vertical', fontsize=10)
+sns.barplot(grouped.yearmonth.values, grouped.price_doc.values, alpha=0.25, color="blue")
+sns.lineplot(grouped.yearmonth.values, grouped.price_doc.values, alpha=1, color="red",
+             markers=True)
+ax.set_xlabel('Year-Month', fontsize=12)
+ax.set_ylabel('Median Price', fontsize=12)
 
 ###############################################################################
 ############################### Missing Value #################################
@@ -269,19 +302,52 @@ fig = pp.fig
 fig.subplots_adjust(top=0.93, wspace=0.3)
 t = fig.suptitle('Correlation among floor features and Price', fontsize=14)
 
-f, ax = plt.subplots(figsize=(12,8))
-plt.scatter(x=data['floor'], y=data['price_doc_log'], c = 'r', alpha=0.15)
-sns.regplot(x="floor", y="price_doc_log", data=data, scatter=False, truncate=True)
-ax.set_xlabel("Floor", fontsize=14)
-ax.set_ylabel("Log price", fontsize=14)
-ax.set_title("Price by floor of home", fontsize=20)
+grouped_floor_price = data.groupby(by="floor")['price_doc'].aggregate(np.median).reset_index()
+f, ax1 = plt.subplots(figsize=(12,8))
+plt.xticks(rotation=90, fontsize=10)
+sns.countplot(x="floor", data=data, ax=ax1, color="blue", alpha=0.5)
+ax1.set_xlabel('Floor Numeber', fontsize=15)
+ax1.set_ylabel('Count', fontsize=15)
+ax2=ax1.twinx()
+sns.pointplot(grouped_floor_price.floor.values, grouped_floor_price.price_doc.values,
+              alpha=0.1, color="red", ax=ax2)
+ax2.set_ylabel('Price', fontsize=15)
+plt.title('The price changes with respect to floors', fontsize=20)
 
 f, ax = plt.subplots(figsize=(12,8))
-plt.scatter(x=data['max_floor'], y=data['price_doc_log'], c = 'r', alpha=0.15)
-sns.regplot(x="max_floor", y="price_doc_log", data=data, scatter=False, truncate=True)
+plt.scatter(x=data['floor'], y=data['price_doc'], c = 'r', alpha=0.15)
+sns.regplot(x="floor", y="price_doc", data=data, scatter=False, truncate=True)
+ax.set_xlabel("Floor", fontsize=14)
+ax.set_ylabel("Price", fontsize=14)
+ax.set_title("Price by floor of home", fontsize=20)
+
+plt.figure(figsize=(12,12))
+sns.jointplot(x="floor", y="price_doc", data=data, kind="kde", space=0, 
+              color="g", height = 10)
+
+
+grouped_maxfloor_price = data.groupby(by="max_floor")['price_doc'].aggregate(np.median).reset_index()
+f, ax1 = plt.subplots(figsize=(12,8))
+plt.xticks(rotation=90, fontsize=10)
+sns.countplot(x="max_floor", data=data, ax=ax1, color="blue", alpha=0.5)
+ax1.set_xlabel("Max Floor Number", fontsize=15)
+ax1.set_ylabel("Count", fontsize=15)
+ax2=ax1.twinx()
+sns.pointplot(grouped_maxfloor_price.max_floor.values, grouped_maxfloor_price.price_doc.values,
+              alpha=0.1, color="red", ax=ax2)
+ax2.set_ylabel("Price", fontsize=15)
+plt.title('The price changes with respect to max floors', fontsize=20)
+
+f, ax = plt.subplots(figsize=(12,8))
+plt.scatter(x=data['max_floor'], y=data['price_doc'], c = 'r', alpha=0.15)
+sns.regplot(x="max_floor", y="price_doc", data=data, scatter=False, truncate=True)
 ax.set_xlabel("Max Floor", fontsize=14)
-ax.set_ylabel("Log Price", fontsize=14)
+ax.set_ylabel("Price", fontsize=14)
 ax.set_title("Price by max floor", fontsize=20)
+
+plt.figure(figsize=(12,12))
+sns.jointplot(x="max_floor", y="price_doc_log", data=data, kind="kde", space=0,
+              color="g", height = 10)
 
 ###############################################################################
 ###############################################################################

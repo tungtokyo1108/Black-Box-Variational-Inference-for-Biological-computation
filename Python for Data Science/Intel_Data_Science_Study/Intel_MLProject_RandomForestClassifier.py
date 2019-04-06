@@ -2,6 +2,8 @@
 """
 Created on Thu Apr  4 09:08:08 2019
 
+Reference: https://github.com/raviolli77/machineLearning_breastCancer_Python/blob/master/notebooks/02_random_forest.md
+
 @author: Tung1108
 """
 
@@ -34,17 +36,6 @@ print('Training Feature Size: ', train_features.shape)
 print('Testing Feature Size: ', test_features.shape)
 print('Training Labels Size: ', train_labels.shape)
 print('Testing Labels Size: ', test_labels.shape)
-
-# Imputing missing values
-train_features.isnull().sum()
-imputer = Imputer(strategy='median')
-imputer.fit(train_features)
-X = imputer.transform(train_features)
-X_test = imputer.transform(test_features)
-print('Missing values in training features: ', np.sum(np.isnan(X)))
-print('Missing values in testing features: ', np.sum(np.isnan(X_test)))
-
-print("Here is the dimensions of our data frame: \n", train_features.shape)
 print("Here is the data types of our columns: \n", train_features.dtypes)
 
 ###############################################################################
@@ -82,6 +73,13 @@ train_features_class = train_features.iloc[:, train_features.columns == 'Largest
 
 training_set, test_set, class_set, test_class_set = train_test_split(train_features_space, 
                                 train_features_class, test_size=0.20, random_state=42)
+imputer = Imputer(strategy='median')
+imputer.fit(training_set)
+X = imputer.transform(training_set)
+X_test = imputer.transform(test_set)
+print('Missing values in training features: ', np.sum(np.isnan(X)))
+print('Missing values in testing features: ', np.sum(np.isnan(X_test)))
+
 
 ###############################################################################
 ############################ Fitting Random Forest ############################
@@ -101,7 +99,35 @@ param_dist = {'max_depth': [2,3,4],
               'max_features': ['auto', 'sqrt', 'log2', None], 
               'criterion': ['gini', 'entropy']}
 cv_rf = GridSearchCV(fit_rf, cv=10, param_grid=param_dist, n_jobs=3)
-cv_rf.fit(training_set, class_set)
+cv_rf.fit(X, class_set)
 print('Best Parameters using grid search: \n', cv_rf.best_params_)
 end = time.time()
 print('Time taken in grid search: {0: .2f}'.format(end-start))
+
+fit_rf.set_params(criterion = 'gini', max_features = 'log2', max_depth = 3)
+
+###############################################################################
+############################ Out of Bag Error Rate ############################
+###############################################################################
+
+fit_rf.set_params(warm_start=True, oob_score=True)
+min_estimators = 15
+max_estimators = 1000
+error_rate = {}
+for i in range(min_estimators, max_estimators+1, 5):
+    fit_rf.set_params(n_estimators=i)
+    fit_rf.fit(X, class_set)
+    oob_error = 1 - fit_rf.oob_score_
+    error_rate[i] = oob_error
+oob_series = pd.Series(error_rate)
+
+fig, ax = plt.subplots(figsize=(10,10))
+ax.set_facecolor('#fafafa')
+oob_series.plot(kind='line', color='red')
+plt.axhline(0.162, color='#875FDB', linestyle='--')
+plt.axhline(0.154, color='#875FDB', linestyle='--')
+plt.xlabel('n_estimators', fontsize=15)
+plt.ylabel('OOB Error Rate', fontsize=15)
+plt.title('OOB Error Rate Across various Forest Sizes', fontsize=20)
+
+print('OOB Error rate for 400 tree is: {0:.5f}'.format(oob_series[400]))

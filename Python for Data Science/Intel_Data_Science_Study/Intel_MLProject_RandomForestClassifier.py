@@ -131,3 +131,70 @@ plt.ylabel('OOB Error Rate', fontsize=15)
 plt.title('OOB Error Rate Across various Forest Sizes', fontsize=20)
 
 print('OOB Error rate for 400 tree is: {0:.5f}'.format(oob_series[400]))
+
+fit_rf.set_params(n_estimators=400, bootstrap=True, warm_start=False, oob_score=False)
+fit_rf.fit(X, class_set)
+
+###############################################################################
+############################ Variable Importance ##############################
+###############################################################################
+
+def variable_importance(fit):
+    try:
+        if not hasattr(fit,'fit'):
+            return print("'{0}' is not an instantiated model from scikit-learn".format(fit))
+        
+        # Capture whether the model has been trained
+        if not vars(fit)["estimator_"]:
+            return print("Model does not appear to be trained.")
+    except KeyError:
+        KeyError("Model entered does not contain 'estimators_' attribute.")
+    
+    importances = fit.feature_importances_
+    indices = np.argsort(importances)[::-1]
+    return {'importance': importances, 
+            'index': indices}
+
+var_imp_rf = variable_importance(fit_rf)
+
+# Create separate variables for each attribute 
+importances_rf = var_imp_rf['importance']
+indices_rf = var_imp_rf['index']
+
+def print_var_importance(importance, indices, names_index):
+    print ("Feature ranking: ")
+    
+    for f in range(0, indices.shape[0]):
+        i = f 
+        print ("{0}. The features '{1}' has a Mean Decease in Impurit of {2:.5f}"
+               .format(f+1, names_index[indices[i]], importance[indices[f]]))
+
+print_var_importance(importances_rf, indices_rf, train_features_space.columns)
+
+
+def variable_importance_plot(importance, indices, name_index):
+    
+    index = np.arange(len(name_index))
+    importance_desc = sorted(importance)
+    feature_space = []
+    for i in range(indices.shape[0]-1, -1, -1):
+        feature_space.append(name_index[indices[i]])
+    
+    fig, ax = plt.subplots(figsize=(15,15))
+    ax.set_facecolor('#fafafa')
+    plt.title('Feature importances for Gradient Boosting Model', fontsize=20)
+    plt.barh(index, importance_desc, align='center', color='#875FDB')
+    plt.yticks(index, feature_space)
+    plt.ylim(-1, indices.shape[0])
+    plt.xlim(0, max(importance_desc) + 0.01)
+    plt.xlabel('Mean Decrease in Impurity', fontsize=15)
+    plt.ylabel('Features', fontsize=15)
+    plt.show()
+    plt.close()
+
+variable_importance_plot(importances_rf, indices_rf, train_features_space.columns)
+
+
+###############################################################################
+############################# Cross Validation ################################
+###############################################################################

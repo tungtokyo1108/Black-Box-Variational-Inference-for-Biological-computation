@@ -80,6 +80,8 @@ X_test = imputer.transform(test_set)
 print('Missing values in training features: ', np.sum(np.isnan(X)))
 print('Missing values in testing features: ', np.sum(np.isnan(X_test)))
 
+class_set = class_set.values.ravel()
+test_class_set = test_class_set.values.ravel()
 
 ###############################################################################
 ############################ Fitting Random Forest ############################
@@ -198,3 +200,65 @@ variable_importance_plot(importances_rf, indices_rf, train_features_space.column
 ###############################################################################
 ############################# Cross Validation ################################
 ###############################################################################
+
+def cross_val_metrics(fit, training_set, class_set, estimator, print_results = True):
+    """
+    Function helps automate cross validation processes while including option
+    to print metrics or store in variables
+    
+    """
+    my_estimators = {
+    'rf': 'estimators_',
+    'nn': 'out_activatio_',
+    'knn': '_fit_method_'
+    }
+    try:
+        # Captures whether first parameter is a model 
+        if not hasattr(fit, 'fit'):
+            return print("'{0}' is not an instantiated model from scikit-learn".format(fit))
+        
+        if not vars(fit)[my_estimators[estimator]]:
+            return print("Model does not appear to be trained.")
+    except KeyError as e:
+        raise("'{0}' does not cerrspond with the appropriate key inside the estimators".format(estimator))
+    
+    n = KFold(n_splits=10)
+    scores = cross_val_score(fit, training_set, class_set, cv=n)
+    if print_results:
+        for i in range(0, len(scores)):
+            print("Cross validation run {0}: {1: 0.3f}".format(i, scores[i]))
+        print("Accuracy: {0: 0.3f} (+/- {1: 0.3f})".format(scores.mean(), scores.std()/2))
+    else:
+        return scores.mean(), scores.std()/2
+
+cross_val_metrics(fit_rf, X, class_set, 'rf', print_results=True)
+predictions_rf = fit_rf.predict(X_test)
+
+
+###############################################################################
+########################### Confusion Matrix ##################################
+###############################################################################
+
+def create_conf_mat(test_class_set, predictions):
+    """ Function returns confusion matrix comparing two arrays """
+    if (len(test_class_set.shape) != len(predictions.shape) == 1):
+        return print('Arrays entered are not 1-D.\n Please enter the correctly sized sets.')
+    elif (test_class_set.shape != predictions.shape):
+        return print('Number od values inside the Arrays are not equal to each other')
+    else:
+        test_crosstb_comp = pd.crosstab(index = test_class_set, columns = predictions)
+        test_crosstb = test_crosstb_comp.values
+        return test_crosstb
+    
+conf_mat = create_conf_mat(test_class_set, predictions_rf)
+cmap = sns.diverging_palette(220, 10, as_cmap=True)
+sns.heatmap(conf_mat, annot=True, cmap=cmap, fmt='d', annot_kws={"size": 12}, linewidths=.05)
+plt.xlabel('Predicted Values', fontsize=10)
+plt.ylabel('Actual Values', fontsize=10)
+plt.title('Actual vs Predicted Confusion Matrix', fontsize=15)
+
+accuracy_rf = fit_rf.score(X_test, test_class_set)
+print("Here is our mean accuracy on the test set: \n {0:.3f}".format(accuracy_rf))
+
+test_error_rate_rf = 1 - accuracy_rf
+print("The test error rate for our model is:\n {0: .4f}".format(test_error_rate_rf))

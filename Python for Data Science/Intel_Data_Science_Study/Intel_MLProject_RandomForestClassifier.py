@@ -262,3 +262,46 @@ print("Here is our mean accuracy on the test set: \n {0:.3f}".format(accuracy_rf
 
 test_error_rate_rf = 1 - accuracy_rf
 print("The test error rate for our model is:\n {0: .4f}".format(test_error_rate_rf))
+
+
+###############################################################################
+########################### ROC Curve Metrics #################################
+###############################################################################
+
+predictions_prob = fit_rf.predict_proba(X_test)[:,1]
+fpr2, tpr2, _ = roc_curve(test_class_set, predictions_prob, pos_label = 1)
+auc_rf = auc(fpr2, tpr2)
+def plot_roc_curve(fpr, tpr, auc, estimator, xlim=None, ylim=None):
+    my_estimators = {'knn': ['Kth Nearest Neighbor', 'deeppink'], 
+                     'rf': ['Random Forest', 'red'],
+                     'nn': ['Neural Network', 'purple']}
+    try: 
+        plot_title = my_estimators[estimator][0]
+        color_value = my_estimators[estimator][1]
+    except KeyError as e:
+       raise("'{0}' does not correspond with the appropriate key inside the estimators".format(estimator)) 
+       
+    fig, ax = plt.subplots(figsize=(10,10))
+    ax.set_facecolor('#fafafa')
+    plt.plot(fpr, tpr, color=color_value, linewidth=1)
+    plt.title('ROC Curve For {0} (AUC = {1: 0.3f})'.format(plot_title, auc))
+    
+    plt.plot([0, 1], [0, 1], 'k--', lw=2)
+    plt.plot([0, 0], [1, 0], 'k--', lw=2, color='black')
+    plt.plot([1, 0], [1, 1], 'k--', lw=2, color='black')
+    if xlim is not None:
+        plt.xlim(*xlim)
+    if ylim is not None:
+        plt.ylim(*ylim)
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.show()
+    plt.close()
+    
+plot_roc_curve(fpr2, tpr2, auc_rf, 'rf', xlim=(-0.01, 1.05), ylim=(0.001, 1.05))    
+
+def print_class_report(predictions, alg_name):
+    print('Classification Report for {0}:'.format(alg_name))
+    print(classification_report(predictions, test_class_set))
+
+class_report = print_class_report(predictions_rf, 'Random Forest')

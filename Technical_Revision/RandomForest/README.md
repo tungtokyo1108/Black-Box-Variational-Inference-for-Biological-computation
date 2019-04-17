@@ -1,5 +1,6 @@
 # Scikit-learn
 - Hand on machine learning with scikit-learn and tensorflow, Chapter 6
+- Artificial Intelligence with Python: https://github.com/PacktPublishing/Artificial-Intelligence-with-Python
 
 # LightGBM
 - https://github.com/Microsoft/LightGBM 

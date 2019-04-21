@@ -23,6 +23,7 @@ sns.set_style("whitegrid")
 sns.set_context("poster")
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.model_selection import cross_val_score, RandomizedSearchCV, GridSearchCV
 from graphviz import Source
 from sklearn.tree import export_graphviz
 import os
@@ -131,14 +132,14 @@ plt.legend()
 
 # The minimum number of samples required to be at leaf node
 tree_reg1 = DecisionTreeRegressor(random_state=42)
-tree_reg2 = DecisionTreeRegressor(random_state=42, min_samples_leaf=10)
+tree_reg2 = DecisionTreeRegressor(random_state=42, min_samples_leaf=100)
 tree_reg1.fit(xx,y)
 tree_reg2.fit(xx,y)
 
 y_pred1 = tree_reg1.predict(xx)
 y_pred2 = tree_reg2.predict(xx)
 
-plt.figure(figsize=(12,6))
+plt.figure(figsize=(20,10))
 plt.subplot(121)
 plt.plot(xx,y,"b.")
 plt.plot(xx, y_pred1,"r.-", linewidth=2, label=r"$\hat{y}$")
@@ -155,41 +156,32 @@ plt.xlabel("Log minority", fontsize=18)
 plt.title("min_sample_left={}".format(tree_reg2.min_samples_leaf), fontsize=14)
 
 
+# let's also include log-minority as a predictor going forward 
+xtemp = np.log(Xtrain['minority'].values)
+Xtrain = Xtrain.assign(logminority=xtemp)
+Xtest = Xtest.assign(logminority=np.log(Xtest['minority'].values))
+Xtrain.head()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Perform 5-fold cross-validation 
+depths = list(range(1,21))
+train_scores = []
+cvmeans = []
+cvstds = []
+cv_scores = []
+for depth in depths:
+    dtree = DecisionTreeRegressor(max_depth=depth)
+    train_scores.append(dtree.fit(Xtrain,ytrain).score(Xtrain,ytrain))
+    scores = cross_val_score(estimator=dtree, X=Xtrain, y=ytrain, cv=5)
+    cvmeans.append(scores.mean())
+    cvstds.append(scores.std())    
+cvmeans = np.array(cvmeans)
+cvstds = np.array(cvstds)
+plt.figure(figsize=(12,12))
+plt.plot(depths, cvmeans, '*-', label="Mean CV")
+plt.fill_between(depths, cvmeans - 2*cvstds, cvmeans + 2*cvstds, alpha=0.5)
+ylim = plt.ylim()
+plt.plot(depths, train_scores, '-+', label="Train")
+plt.legend()
+plt.ylabel("Accuracy", fontsize=15)
+plt.xlabel("Max Depth", fontsize=15)
+plt.xticks(depths)

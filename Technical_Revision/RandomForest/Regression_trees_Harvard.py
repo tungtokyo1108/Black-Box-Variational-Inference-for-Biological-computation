@@ -185,3 +185,37 @@ plt.legend()
 plt.ylabel("Accuracy", fontsize=15)
 plt.xlabel("Max Depth", fontsize=15)
 plt.xticks(depths)
+
+
+# Perform Randomized search on hyper parameters
+max_depth = list(range(1,21))
+min_samples_leaf = [1,2,4,6,8,10]
+min_samples_split = [2,4,6,10]
+max_features = ['auto', 'sqrt', 'log2', None]
+hyperparameter_grid = {'max_depth': max_depth,
+                       'min_samples_leaf': min_samples_leaf,
+                       'min_samples_split': min_samples_split,
+                       'max_features': max_features}
+dtree = DecisionTreeRegressor(random_state=42)
+random_cv = RandomizedSearchCV(estimator=dtree, 
+                               param_distributions=hyperparameter_grid, 
+                               cv=4, n_iter=25,
+                               scoring='neg_mean_absolute_error',
+                               n_jobs=-1, verbose=1,
+                               return_train_score=True, random_state=42)
+random_cv.fit(Xtrain,ytrain)
+random_results = pd.DataFrame(random_cv.cv_results_).sort_values('mean_test_score',ascending=False)
+random_results.head(10)
+random_cv.best_estimator_
+
+# Perform exhausive search over specified parameter values for an estimator 
+grid_search_cv = GridSearchCV(estimator=dtree,param_grid=hyperparameter_grid, verbose=1, cv=4, n_jobs=-1)
+grid_search_cv.fit(Xtrain,ytrain)
+grid_search_cv.best_estimator_
+results_grid_search = pd.DataFrame(grid_search_cv.cv_results_)
+fig, ax = plt.subplots(figsize=(12,8))
+plt.plot(results_grid_search['param_max_depth'], 
+         -1 * results_grid_search['mean_test_score'], label = 'Testing Error')
+plt.plot(results_grid_search['param_max_depth'], 
+         -1 * results_grid_search['mean_train_score'], label = 'Training Error')
+plt.legend()

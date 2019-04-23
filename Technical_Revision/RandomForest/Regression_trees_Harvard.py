@@ -219,3 +219,20 @@ plt.plot(results_grid_search['param_max_depth'],
 plt.plot(results_grid_search['param_max_depth'], 
          -1 * results_grid_search['mean_train_score'], label = 'Training Error')
 plt.legend()
+
+# Boostrap-Aggregating 
+from sklearn.utils import resample
+ntrees = 500
+estimators = []
+R2s = []
+yhats_test = np.zeros((Xtest.shape[0], ntrees))
+
+plt.figure(figsize=(12,12))
+plt.plot(np.log(x),y,'.')
+for i in range(ntrees):
+    simpletree = DecisionTreeRegressor(max_depth=3)
+    boot_xx, boot_yy = resample(Xtrain[['logminority']], ytrain)
+    estimators = np.append(estimators, simpletree.fit(boot_xx, boot_yy))
+    R2s = np.append(R2s, simpletree.score(Xtest[['logminority']], ytest))
+    yhats_test[:,i] = simpletree.predict(Xtest[['logminority']])
+    plt.plot(np.log(x), simpletree.predict(np.log(x).reshape(-1,1)), 'red', alpha=0.05)

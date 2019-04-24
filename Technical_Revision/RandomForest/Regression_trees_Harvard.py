@@ -236,3 +236,23 @@ for i in range(ntrees):
     R2s = np.append(R2s, simpletree.score(Xtest[['logminority']], ytest))
     yhats_test[:,i] = simpletree.predict(Xtest[['logminority']])
     plt.plot(np.log(x), simpletree.predict(np.log(x).reshape(-1,1)), 'red', alpha=0.05)
+
+from sklearn.metrics import r2_score
+
+ntrees = 500
+estimators = []
+R2s = []
+yhats_test = np.zeros((Xtest.shape[0], ntrees))
+for i in range(ntrees):
+    simpletree = DecisionTreeRegressor(max_depth=4)
+    boot_xx, boot_yy = resample(Xtrain, ytrain)
+    estimators = np.append(estimators, simpletree.fit(boot_xx, boot_yy))
+    R2s = np.append(R2s, simpletree.score(Xtest, ytest))
+    yhats_test[:,i] = simpletree.predict(Xtest)
+
+plt.figure(figsize=(12,12))
+plt.hist(R2s, bins=50, alpha=0.5, density=True)
+print("Average R-squared score of the individual trees: ", np.mean(R2s))
+
+bagged_test_predictions = np.mean(yhats_test, axis=1)
+print("R-squared score of the aggreated trees: ", r2_score(ytest, bagged_test_predictions))

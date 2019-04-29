@@ -150,3 +150,33 @@ for clf in (log_clf, rnd_clf, svm_clf, voting_clf):
     y_pred = clf.predict(Xtest)
     print(clf.__class__.__name__, accuracy_score(ytest, y_pred))
     
+###############################################################################
+########################## Bagging ensembles ##################################
+###############################################################################
+
+from sklearn.ensemble import BaggingClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+tree_clf = DecisionTreeClassifier(random_state=42, max_depth=best_depth)
+tree_clf.fit(Xtrain, ytrain)
+y_tree_pred = tree_clf.predict(Xtest)
+print("Decision Tree: ", accuracy_score(ytest, y_tree_pred))
+
+bag_clf = BaggingClassifier(
+        DecisionTreeClassifier(random_state=42, max_depth=best_depth), n_estimators=int(Xtrain.shape[1]/2), 
+        max_samples=100, bootstrap=True, random_state=42)
+bag_clf.fit(Xtrain, ytrain)
+y_pred = bag_clf.predict(Xtest)
+print("Decision Tree + Bagging: ", accuracy_score(ytest,y_pred))
+
+bag_outof_clf = BaggingClassifier(
+        DecisionTreeClassifier(random_state=42, max_depth=best_depth), n_estimators=int(Xtrain.shape[1]/2),
+        max_samples=100, oob_score=True, random_state=40)
+bag_outof_clf.fit(Xtrain,ytrain)
+y_outof_pred = bag_outof_clf.predict(Xtest)
+print("Decision Tree + Bagging + Out-of-Bagging: ", accuracy_score(ytest, y_outof_pred))
+
+rnd_clf = RandomForestClassifier(n_estimators=int(Xtrain.shape[1]/2), max_depth=best_depth, random_state=42)
+rnd_clf.fit(Xtrain, ytrain)
+y_rnd_pred = rnd_clf.predict(Xtest)
+print("Random Forest: ", accuracy_score(ytest,y_rnd_pred))

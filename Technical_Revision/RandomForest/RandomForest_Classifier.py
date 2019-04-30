@@ -180,3 +180,23 @@ rnd_clf = RandomForestClassifier(n_estimators=int(Xtrain.shape[1]/2), max_depth=
 rnd_clf.fit(Xtrain, ytrain)
 y_rnd_pred = rnd_clf.predict(Xtest)
 print("Random Forest: ", accuracy_score(ytest,y_rnd_pred))
+
+###############################################################################
+############################# Adaboost Model ##################################
+###############################################################################
+
+model = AdaBoostClassifier(base_estimator=DecisionTreeClassifier(max_depth=5, random_state=42),
+                           n_estimators=100, learning_rate=0.05)
+model.fit(Xtrain, ytrain)
+
+y_Ada_pred_train = model.predict(Xtrain)
+y_Ada_pred_test = model.predict(Xtest)
+
+train_score = accuracy_score(ytrain, y_Ada_pred_train)*100
+test_score = accuracy_score(ytest, y_Ada_pred_test)*100
+
+print("Accuracy, Training Set :", str(train_score)+'%')
+print("Accuracy, Testing Set :", str(test_score)+'%')
+
+train_scores = list(model.staged_score(Xtrain, ytrain))
+test_scores = list(model.staged_score(Xtest, ytest))

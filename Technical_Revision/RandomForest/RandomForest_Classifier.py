@@ -200,3 +200,71 @@ print("Accuracy, Testing Set :", str(test_score)+'%')
 
 train_scores = list(model.staged_score(Xtrain, ytrain))
 test_scores = list(model.staged_score(Xtest, ytest))
+
+train_scores = list(model.staged_score(Xtrain, ytrain))
+test_scores = list(model.staged_score(Xtest, ytest))
+plt.figure(figsize=(12,12))
+plt.plot(train_scores, label='train')
+plt.plot(test_scores, label='test')
+plt.xlabel('Iteration', fontsize=15)
+plt.ylabel('Accuracy', fontsize=15)
+plt.title("Variation of Accuracy with Iterations", fontsize=20)
+plt.legend()
+
+score_train, score_test, depth_start, depth_end = {}, {}, 2, 20
+for i in tqdm(range(depth_start, depth_end)):
+    model = AdaBoostClassifier(
+            base_estimator=DecisionTreeClassifier(max_depth=i),
+            n_estimators=100, learning_rate=0.05)
+    model.fit(Xtrain, ytrain)
+    score_train[i] = accuracy_score(ytrain, model.predict(Xtrain))
+    score_test[i] = accuracy_score(ytest, model.predict(Xtest))
+
+lists1 = sorted(score_train.items())
+lists2 = sorted(score_test.items())
+x1, y1 = zip(*lists1)
+x2, y2 = zip(*lists2)
+plt.figure(figsize=(12,12))
+plt.ylabel("Accuracy", fontsize=15)
+plt.xlabel("Depth", fontsize=15)
+plt.title('Variation of Accuracy with Depth - Adaboost Classifier', fontsize=20)
+plt.plot(x1, y1, 'b-', label='Train')
+plt.plot(x2, y2, 'g-', label='Test')
+plt.legend()
+plt.show()
+
+###############################################################################
+################################ Light GBM ####################################
+###############################################################################
+
+features = [column for column in spam_df.columns if column not in ['Spam']]
+target = spam_df['Spam']
+
+param = {
+        'bagging_freq': 5,
+        'bagging_fraction': 0.4,
+        'boost_from_average': 'false',
+        'boost': 'gbdt',
+        'feature_fraction': 0.05,
+        'learning_rate': 0.01,
+        'max_depth': -1,
+        'metric': 'auc',
+        'min_data_in_leaf': 80,
+        'min_sum_hessian_in_leaf': 10.0,
+        'num_leaves': 13,
+        'num_threads': 8,
+        'tree_learner': 'serial',
+        'objective': 'binary',
+        'verbosity': 1
+        }
+folds = StratifiedKFold(n_splits=10, shuffle=False, random_state=42)
+oof = np.zeros(len(spam_df))
+predictions = np.zeros(len(ytest))
+feature_importance_df = pd.DataFrame()
+
+for fold_, (trn_idx, val_idx) in enumerate(folds.split(spam_df.values, target.values)):
+    print("Fold {}".format(fold_))
+    trn_data = lgb.Dataset(spam_df.iloc[trn_idx][features], label=target.iloc[trn_idx])
+    val_data = lgb.Dataset(spam_df.iloc[val_idx][features], label=target.iloc[val_idx])
+    num_round = 1000000
+    

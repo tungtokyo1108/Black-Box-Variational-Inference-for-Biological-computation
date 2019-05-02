@@ -259,12 +259,33 @@ param = {
         }
 folds = StratifiedKFold(n_splits=10, shuffle=False, random_state=42)
 oof = np.zeros(len(spam_df))
-predictions = np.zeros(len(ytest))
+predictions = np.zeros(len(Xtest))
 feature_importance_df = pd.DataFrame()
 
-for fold_, (trn_idx, val_idx) in enumerate(folds.split(spam_df.values, target.values)):
+for fold_, (trn_idx, val_idx) in enumerate(folds.split(predictors.values, response.values)):
     print("Fold {}".format(fold_))
     trn_data = lgb.Dataset(spam_df.iloc[trn_idx][features], label=target.iloc[trn_idx])
     val_data = lgb.Dataset(spam_df.iloc[val_idx][features], label=target.iloc[val_idx])
     num_round = 1000000
+    clf = lgb.train(param, trn_data, num_round, valid_sets=[trn_data, val_data], verbose_eval=1000, early_stopping_rounds=3000)
+    oof[val_idx] = clf.predict(spam_df.iloc[val_idx][features], num_iteration=clf.best_iteration)
+    fold_importance_df = pd.DataFrame()
+    fold_importance_df["Feature"] = features
+    fold_importance_df["importance"] = clf.feature_importance()
+    fold_importance_df["fold"] = fold_ + 1
+    feature_importance_df = pd.concat([feature_importance_df, fold_importance_df], axis=0)
+    predictions += clf.predict(Xtest, num_iteratoration=clf.best_iteration) / folds.n_splits
+print("CV score: {:<8.5f}".format(roc_auc_score(target,oof)))
     
+cols = (feature_importance_df[["Feature", "importance"]]
+        .groupby("Feature")
+        .mean()
+        .sort_values(by="importance", ascending=False).index)
+best_features = feature_importance_df.loc[feature_importance_df.Feature.isin(cols)]
+
+plt.figure(figsize=(15,20))
+sns.barplot(x="importance", y="Feature", data=best_features.sort_values(by="importance", ascending=False))
+plt.yticks(fontsize=10)
+plt.xticks(fontsize=10)
+plt.title('Feature importance (averaged/folds)', fontsize=25)
+plt.tight_layout()

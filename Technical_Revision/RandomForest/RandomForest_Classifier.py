@@ -38,10 +38,12 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import learning_curve
 from sklearn.model_selection import train_test_split
 import lightgbm as lgb
+import xgboost as xgb
 from tqdm import tqdm
 
 spam_df = pd.read_csv('spam.csv', header=None)
@@ -289,3 +291,31 @@ plt.yticks(fontsize=10)
 plt.xticks(fontsize=10)
 plt.title('Feature importance (averaged/folds)', fontsize=25)
 plt.tight_layout()
+
+###############################################################################
+################# Stochastic Gradient Boosting ################################
+###############################################################################
+
+model = xgb.XGBClassifier()
+subsample = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0]
+n_estimators = [50, 100, 150, 200]
+max_depth = [2, 4, 6, 8, 10]
+# param_grid = dict(subsample=subsample)
+# colsample_grid = dict(colsample_bytree=subsample)
+param_grid = dict(colsample_bylevel = subsample, max_depth=max_depth, n_estimators=n_estimators)
+kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=7)
+grid_search = GridSearchCV(model, param_grid, scoring="neg_log_loss", n_jobs=-1, cv=kfold)
+# grid_search = GridSearchCV(model, colsample_grid, scoring="neg_log_loss", n_jobs=-1, cv=kfold)
+grid_result = grid_search.fit(Xtrain, ytrain)
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+means = grid_result.cv_results_['mean_test_score']
+stds = grid_result.cv_results_['std_test_score']
+params = grid_result.cv_results_['params']
+for mean, stdev, param in zip(means, stds, params):
+    print("%f (%f) with: %r" % (mean, stdev, param))
+    
+plt.figure(figsize=(12,12))
+plt.errorbar(subsample, means, yerr=stds)
+plt.title("XGBoost subsample vs Log Loss", fontsize=20)
+plt.xlabel('Subsample', fontsize=15)
+plt.ylabel('Log Loss', fontsize=15)

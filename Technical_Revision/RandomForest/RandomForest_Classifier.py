@@ -31,7 +31,7 @@ import sklearn.metrics as metrics
 from sklearn.metrics import accuracy_score 
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import mean_squared_error
-from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import roc_auc_score, roc_curve, auc
 from sklearn import tree
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -45,6 +45,7 @@ from sklearn.model_selection import train_test_split
 import lightgbm as lgb
 import xgboost as xgb
 from tqdm import tqdm
+from sklearn.utils.multiclass import unique_labels
 
 spam_df = pd.read_csv('spam.csv', header=None)
 columns = ["Column_" + str(i+1) for i in range(spam_df.shape[1]-1)] + ['Spam']
@@ -114,6 +115,7 @@ model.fit(Xtrain, ytrain)
 
 y_pred_train = model.predict(Xtrain)
 y_pred_test = model.predict(Xtest)
+y_score_test = model.decision_fuction(Xtest)
 
 train_score = accuracy_score(ytrain, y_pred_train)*100
 test_score = accuracy_score(ytest, y_pred_test)*100
@@ -319,3 +321,61 @@ plt.errorbar(subsample, means, yerr=stds)
 plt.title("XGBoost subsample vs Log Loss", fontsize=20)
 plt.xlabel('Subsample', fontsize=15)
 plt.ylabel('Log Loss', fontsize=15)
+
+###############################################################################
+############################# Confusion Matrix ################################
+###############################################################################
+
+cm = confusion_matrix(ytest, y_pred_test)
+cmap = sns.diverging_palette(220, 10, as_cmap=True)
+plt.figure(figsize=(5,5))
+sns.heatmap(cm, annot=True, fmt='d', cbar=False, cmap=cmap, linewidth=.05)
+plt.xlabel('Predicted label', fontsize=10)
+plt.ylabel('True lablel', fontsize=10)
+plt.title('Confusin Matrix', fontsize=15)
+
+def plot_confusion_matrix(y_true, y_pred, normalize=False,
+                          title=None, cmap=plt.cm.Blues):
+    if not title:
+        if normalize:
+            title = 'Normalized confusion matrix'
+        else:
+            title = 'Confusion matrix, without normalization'
+    
+    cm = confusion_matrix(y_true, y_pred)
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:,np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print("Confusion matrix, without normalization")
+    
+    print(cm)
+    
+    fig, ax = plt.subplots(figsize=(8,8))
+    im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
+    ax.figure.colorbar(im, ax=ax)
+    ax.set(xticks=np.arange(cm.shape[1]),
+           yticks=np.arange(cm.shape[0]))
+    ax.set_title(title, fontsize=20)
+    ax.set_ylabel('True label', fontsize=15)
+    ax.set_xlabel('Predicted label', fontsize=15)
+    
+    # Rotate the tick labels and set their aligment
+    plt.setp(ax.get_xticklabels(), ha='right', rotation_mode="anchor")
+    
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max()/2
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(j, i, format(cm[i, j], fmt), 
+                    ha = "center", va = "center",
+                    color = "white" if cm[i, j] > thresh else "black")
+    fig.tight_layout()
+    return ax
+
+np.set_printoptions(precision=2)
+
+plot_confusion_matrix(ytest, y_pred_test, title='Confusion matrix, without normalization')
+plot_confusion_matrix(ytest, y_pred_test, normalize=True,
+                      title='Normalized confusion matrix')
+plt.show()

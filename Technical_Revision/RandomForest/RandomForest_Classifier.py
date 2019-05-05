@@ -322,6 +322,20 @@ plt.title("XGBoost subsample vs Log Loss", fontsize=20)
 plt.xlabel('Subsample', fontsize=15)
 plt.ylabel('Log Loss', fontsize=15)
 
+model_best = xgb.XGBClassifier(colsample_bylevel=0.1, max_depth=10, n_estimators=150)
+model_best.fit(Xtrain,ytrain)
+feature_importance_XGB = model_best.feature_importances_
+feature_importance_XGB = 100*(feature_importance_XGB / feature_importance_XGB.max())
+sorted_idx_XGB = np.argsort(feature_importance_XGB)
+pos_XGB = np.arange(sorted_idx_XGB.shape[0]) + .5
+
+plt.figure(figsize=(12,12))
+plt.barh(pos_XGB, feature_importance_XGB[sorted_idx_XGB], align='center')
+plt.yticks(pos_XGB, Xtrain.columns[sorted_idx_XGB], fontsize=10) 
+plt.xticks(fontsize=15)
+plt.xlabel('Relative Importance', fontsize=15)
+plt.title('Variable Importance of XGB', fontsize=20)
+
 ###############################################################################
 ############################# Confusion Matrix ################################
 ###############################################################################

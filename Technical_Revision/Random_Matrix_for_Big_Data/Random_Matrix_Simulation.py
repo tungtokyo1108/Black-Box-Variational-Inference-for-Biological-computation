@@ -211,3 +211,93 @@ for sample in samples:
     n_multiR = multiR/meanR
     ax[ind] = plot_space_eig(n_multiR, sample, "Size of Sample: {}".format(sample), ax[ind])
     ind += 1
+
+
+###############################################################################
+########################### Marcenko-Pastus Law ###############################
+############################################################################### 
+
+import time as ti
+
+# The first size of matrix
+N = 100
+
+# The second size of matrix
+P = 800
+
+# The number of samples
+Samples = 50
+
+# Defining the Marcenko-Pastus density function 
+c = N / P
+xmin = (1 - 1/np.sqrt(c))**2
+xmax = (1 + 1/np.sqrt(c))**2
+rho = lambda x: np.sqrt((x-xmin) * (xmax-x)) / (2 * np.pi * x )
+
+def eig_den_GOE(N, P, Samples):
+    x = []
+    for sample in range(Samples):
+        H = np.random.randn(N,P)
+        W = np.dot(H, H.T)
+        x = np.append(x, la.eigvalsh(W)/(1*N))
+    return x
+
+def plot_MPL(X, sample, xmin, xmax, title, ax, color='Greens'):
+    T = np.linspace(xmin, xmax, sample)
+    ax.hist(X, bins=50, alpha=0.5, density=1)
+    ax.plot(T, rho(T), '--', alpha=1)
+    ax.set_title(title)
+    ax.set_xlabel('Eigen Value', fontsize=10)
+    ax.set_ylabel('Density', fontsize=10)
+
+start = ti.time()
+
+rand_mat = eig_den_GOE(N, P, Samples)
+fig, ax = plt.subplots(figsize=(12,12))
+ax.hist(rand_mat, bins=50, density=1, alpha=0.5)
+x = np.linspace(xmin, xmax, 1000)
+ax.plot(x,rho(x),'--',alpha=1)
+
+end = ti.time()
+print(end-start)
+
+# Range of samples
+N = 100
+P = 800
+Samples = [50, 500, 5000, 10000]
+fig, ax = plt.subplots(1, len(Samples), figsize=(20,5))
+ind = 0
+for sample in Samples:
+    rand_mat = eig_den_GOE(N, P, sample)
+    ax[ind] = plot_MPL(rand_mat, sample, "Size of Sample: {}".format(sample), ax[ind])
+    ind += 1
+
+# Range of N 
+N = [100, 500, 1000, 5000]
+P = 1000
+sample = 1000
+fig, ax = plt.subplots(1, len(N), figsize=(20,5))
+ind = 0
+for n in N:
+    c = n / P
+    xmin = (1 - 1/np.sqrt(c))**2
+    xmax = (1 + 1/np.sqrt(c))**2
+    rho = lambda x: np.sqrt((x-xmin) * (xmax-x)) / (2 * np.pi * x )
+    rand_mat = eig_den_GOE(n, P, sample)
+    ax[ind] = plot_MPL(rand_mat, sample, xmin, xmax, "Size of dimension N: {}".format(n), ax[ind])
+    ind += 1
+
+# Range of P 
+N = 1000
+P = [100, 500, 900, 2000]
+sample = 1000
+fig, ax = plt.subplots(1, len(P), figsize=(20,5))
+ind = 0
+for p in P:
+    c = N/p
+    xmin = (1 - 1/np.sqrt(c))**2
+    xmax = (1 - 1/np.sqrt(c))**2
+    rho = lambda x: np.sqrt((x-xmin)*(xmax-x)) / (2 * np.pi * x)
+    rand_mat = eig_den_GOE(N, p, sample)
+    ax[ind] = plot_MPL(rand_mat, sample, xmin, xmax, "Size of dimension P: {}".format(p), ax[ind])
+    ind += 1    

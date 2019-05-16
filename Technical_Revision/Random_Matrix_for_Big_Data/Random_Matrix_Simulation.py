@@ -251,13 +251,11 @@ def plot_MPL(X, sample, xmin, xmax, title, ax, color='Greens'):
     ax.set_ylabel('Density', fontsize=10)
 
 start = ti.time()
-
 rand_mat = eig_den_GOE(N, P, Samples)
 fig, ax = plt.subplots(figsize=(12,12))
 ax.hist(rand_mat, bins=50, density=1, alpha=0.5)
 x = np.linspace(xmin, xmax, 1000)
 ax.plot(x,rho(x),'--',alpha=1)
-
 end = ti.time()
 print(end-start)
 

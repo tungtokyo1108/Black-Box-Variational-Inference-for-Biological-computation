@@ -218,13 +218,10 @@ for sample in samples:
 ############################################################################### 
 
 import time as ti
-
 # The first size of matrix
 N = 100
-
 # The second size of matrix
 P = 800
-
 # The number of samples
 Samples = 50
 

@@ -53,6 +53,14 @@ namespace hash
             void printLinkList(NodeLinkList<ElementType>* node);
             void printUnionInterest(NodeLinkList<ElementType>* head1, NodeLinkList<ElementType>* head2);
     };
+
+    template <typename ElementType>
+    class FindElements
+    {
+        public:
+            void sumPairs(ElementType arr[], ElementType size_arr, ElementType sum);
+            void mostFreq(ElementType arr[], ElementType size_arr);
+    };
 }
 
 #pragma region implementation 
@@ -190,6 +198,23 @@ namespace hash
         std::cout << " The result of union : ";
         printLinkList(union_list);
         std::cout << "\n" << std::endl;
+    }
+
+    ///////////////////////////// Find Elements in Hashing //////////////////////////////////////////////
+
+    template <typename ElementType>
+    void FindElements<ElementType>::sumPairs(ElementType arr[], ElementType size_arr, ElementType sum)
+    {
+        std::unordered_set<ElementType> set;
+        for (int i=0; i < size_arr; i++)
+        {
+            ElementType temp = sum - arr[i];
+            if (temp != 0 && set.find(temp) != set.end())
+            {
+                std::cout << "Pair with given sum " << sum << " is " << arr[i] << " + " << temp << std::endl;
+            }
+            set.insert(arr[i]);
+        }
     }
 }
 

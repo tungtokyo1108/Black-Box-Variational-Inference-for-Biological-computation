@@ -121,73 +121,90 @@ void TestSumPair()
     std::cout << "\n" << std::endl;
     std::cout << "Algorithm for pair with given sum \n" << std::endl;
 
-    int choise;
-    std::cout << "Please choice the type of number. 0 is Integer or 1 is Double \n" << std::endl;
-    std::cin >> choise;
+    int option;
+    std::cout << "There are the two types of test. \n";
+    std::cout << "- 0 is AutoTest \n";
+    std::cout << "- 1 is Step-by-Step Test \n";
+    std::cout << "Your option: ";
+    std::cin >> option;
+    std::cout << "\n" << std::endl;
 
-    if (choise == 0) 
+    if (option == 0) 
     {
-        std::cout << "Case: The integer number \n" << std::endl;
-        int size_arr;
-        std::cout << "Please provide the size of array: ";
-        std::cin >> size_arr;
-        std::cout << "\n" << std::endl;
-        int A[size_arr];
-        std::cout << "Please enter the data : \n" << std::endl;
-        for (int i=0; i < size_arr; i++)
-        {
-            std::cin >> A[i];
-        }
-        std::cout << "\n" << std::endl;
-
-        int sum;
-        std::cout << "Please enter sum of pair: ";
-        std::cin >> sum;
-        std::cout << "\n" << std::endl;
+        std::cout << "- Case 1: The integer number \n" << std::endl;
+        int A[] = {1, 4, 45, 6, 10, 12};
+        int sum = 16;
+        int size_arr = sizeof(A)/sizeof(A[0]);
 
         FindElements<int> fe;
         fe.sumPairs(A, size_arr, sum);
-    } 
+        std::cout << "\n" << std::endl;
+
+        std::cout << "- Case 2: The double number \n" << std::endl;
+        double A_d[] = {1.5, -2.5, 3.6, -4.6, 5.7, -6.7};
+        double sum_d = -1;
+        int size_arr_d = sizeof(A_d)/sizeof(A_d[0]);
+
+        FindElements<double> fe_d;
+        fe_d.sumPairs(A_d, size_arr_d, sum_d);
+    }
     else
     {
-        std::cout << "Case: The double number \n" << std::endl;
-        int size_arr;
-        std::cout << "Please provide the size of array: ";
-        std::cin >> size_arr;
+        int choise;
+        std::cout << "There are two types of number which are used to test. \n";
+        std::cout << "- 0 is option for Integer number \n";
+        std::cout << "- 1 is option for Double number \n";
+        std::cout << "Your option: ";
+        std::cin >> choise;
         std::cout << "\n" << std::endl;
-        double A[size_arr];
-        std::cout << "Please enter the data : \n" << std::endl;
-        for (int i=0; i < size_arr; i++)
+
+        if (choise == 0) 
         {
-            std::cin >> A[i];
+            std::cout << "Case: The integer number \n";
+            int size_arr;
+            std::cout << "Please provide the size of array: ";
+            std::cin >> size_arr;
+            std::cout << "\n";
+            int A[size_arr];
+            std::cout << "Please enter the data : \n";
+            for (int i=0; i < size_arr; i++)
+            {
+                std::cin >> A[i];
+            }
+            std::cout << "\n";
+
+            int sum;
+            std::cout << "Please enter sum of pair: ";
+            std::cin >> sum;
+            std::cout << "\n";
+
+            FindElements<int> fe;
+            fe.sumPairs(A, size_arr, sum);
+        } 
+        else
+        {
+            std::cout << "Case: The double number \n";
+            int size_arr;
+            std::cout << "Please provide the size of array: ";
+            std::cin >> size_arr;
+            std::cout << "\n";
+            double A[size_arr];
+            std::cout << "Please enter the data : \n";
+            for (int i=0; i < size_arr; i++)
+            {   
+                std::cin >> A[i];
+            }
+            std::cout << "\n";
+
+            double sum;
+            std::cout << "Please enter sum of pair: ";
+            std::cin >> sum;
+            std::cout << "\n";
+
+            FindElements<double> fe;
+            fe.sumPairs(A, size_arr, sum);
         }
-        std::cout << "\n" << std::endl;
-
-        double sum;
-        std::cout << "Please enter sum of pair: ";
-        std::cin >> sum;
-        std::cout << "\n" << std::endl;
-
-        FindElements<double> fe;
-        fe.sumPairs(A, size_arr, sum);
     }
-
-    /*std::cout << "- Case 1: The integer number \n" << std::endl;
-    int A[] = {1, 4, 45, 6, 10, 12};
-    int sum = 16;
-    int size_arr = sizeof(A)/sizeof(A[0]);
-
-    FindElements<int> fe;
-    fe.sumPairs(A, size_arr, sum);
-    std::cout << "\n" << std::endl;
-
-    std::cout << "- Case 2: The double number \n" << std::endl;
-    double A_d[] = {1.5, -2.5, 3.6, -4.6, 5.7, -6.7};
-    double sum_d = -1;
-    int size_arr_d = sizeof(A_d)/sizeof(A_d[0]);
-
-    FindElements<double> fe_d;
-    fe_d.sumPairs(A_d, size_arr_d, sum_d);*/
 
     std::cout << "***************************************************";
     std::cout << "\n" << std::endl;

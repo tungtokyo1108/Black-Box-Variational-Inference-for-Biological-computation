@@ -210,13 +210,31 @@ void TestSumPair()
     std::cout << "\n" << std::endl;
 }
 
+void TestSumFour()
+{
+    int arr[] = {1,5,1,0,6,0};
+    int sum = 7;
+    int size_arr = sizeof(arr)/sizeof(arr[0]);
+    FindElements<int> fe_i;
+    if (fe_i.sumFours(arr,size_arr,sum))
+    {
+        std::cout << "Yes\n" << std::endl; 
+    }
+    else 
+    {
+        std::cout << "No\n" << std::endl;
+    }
+    
+}
+
 int main (int argc, char const* argv[])
 {
     try
     {
-        TestPrintBinaryTreeHash();
+        /*TestPrintBinaryTreeHash();
         TestUnionIntersetLL();
-        TestSumPair();
+        TestSumPair();*/
+        TestSumFour();
     }
     catch(const std::exception& e)
     {

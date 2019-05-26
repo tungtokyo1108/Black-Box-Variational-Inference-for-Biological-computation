@@ -60,6 +60,7 @@ namespace hash
         public:
             void sumPairs(ElementType arr[], ElementType size_arr, ElementType sum);
             void mostFreq(ElementType arr[], ElementType size_arr);
+            bool sumFours(ElementType arr[], ElementType size_arr, ElementType sum);
     };
 }
 
@@ -215,6 +216,36 @@ namespace hash
             }
             set.insert(arr[i]);
         }
+    }
+
+    template <typename ElementType>
+    bool FindElements<ElementType>::sumFours(ElementType arr[], ElementType size_arr, ElementType sum)
+    {
+        std::unordered_map<ElementType, std::vector<std::pair<ElementType, ElementType>>> hash;
+        for (int i=0; i < size_arr; i++)
+        {
+            for (int j=i+1; j < size_arr; j++)
+            {
+                ElementType sum_pair = arr[i] + arr[j];
+                if (hash.find(sum - sum_pair) != hash.end())
+                {
+                    auto num = hash.find(sum - sum_pair);
+                    std::vector<std::pair<ElementType, ElementType>> rest = num->second;
+
+                    for (int k=0; k < num->second.size(); k++)
+                    {
+                        std::pair<ElementType, ElementType> it = rest[k];
+                        if (it.first != i && it.first != j && it.second != i && it.second != j)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                hash[sum_pair].push_back(std::make_pair(i,j));
+            }
+        }
+        hash.clear();
+        return false;
     }
 }
 

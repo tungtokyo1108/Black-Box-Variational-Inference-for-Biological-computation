@@ -5,6 +5,7 @@
 # Data Scientists
 - Author of "Data Science from Scratch": https://github.com/joelgrus
 - Author of "Hands-On Machine Learning with Scikit-Learn and TensorFlow": https://github.com/ageron
+- Author of "Deep Learning with Python": https://github.com/fchollet
 
 # Computation 
 - Intel® GPU Compute Samples: https://github.com/intel/compute-samples

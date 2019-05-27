@@ -2,6 +2,9 @@
 #include <map>
 #include <iostream>
 #include <bits/stdc++.h>
+#include <unordered_map>
+#include <algorithm>
+#include <iterator>
 
 namespace hash 
 {
@@ -60,7 +63,9 @@ namespace hash
         public:
             void sumPairs(ElementType arr[], ElementType size_arr, ElementType sum);
             void mostFreq(ElementType arr[], ElementType size_arr);
-            bool sumFours(ElementType arr[], ElementType size_arr, ElementType sum);
+            void sumFours(ElementType arr[], ElementType size_arr, ElementType sum);
+            void printArr(ElementType arr[], int index, std::vector<ElementType> vec);
+            void sumSubArr(ElementType arr[], int size_arr, ElementType sum);
     };
 }
 
@@ -219,7 +224,7 @@ namespace hash
     }
 
     template <typename ElementType>
-    bool FindElements<ElementType>::sumFours(ElementType arr[], ElementType size_arr, ElementType sum)
+    void FindElements<ElementType>::sumFours(ElementType arr[], ElementType size_arr, ElementType sum)
     {
         std::unordered_map<ElementType, std::vector<std::pair<ElementType, ElementType>>> hash;
         for (int i=0; i < size_arr; i++)
@@ -237,7 +242,7 @@ namespace hash
                         std::pair<ElementType, ElementType> it = rest[k];
                         if (it.first != i && it.first != j && it.second != i && it.second != j)
                         {
-                            return true;
+                            std::cout << "Four numbers with given sum " << sum << " is: " << it.first << " + " << it.second << std::endl;
                         }
                     }
                 }
@@ -245,7 +250,38 @@ namespace hash
             }
         }
         hash.clear();
-        return false;
+    }
+
+    template <typename ElementType>
+    void FindElements<ElementType>::printArr(ElementType arr[], int index, std::vector<ElementType> vec)
+    {
+        for (int &j: vec)
+        {
+            std::cout << "[ " << j+1 << "->" << index << " ] -- { ";
+            std::copy(arr + j + 1, arr + index + 1, 
+                        std::ostream_iterator<ElementType>(std::cout, " "));
+            std::cout << "}\n";
+        }
+    }
+
+    template <typename ElementType>
+    void FindElements<ElementType>::sumSubArr(ElementType arr[], int size_arr, ElementType sum)
+    {
+        std::unordered_map<ElementType, std::vector<ElementType>> hashmap;
+        hashmap[0].push_back(-1);
+
+        ElementType sum_check = 0;
+
+        for (int index=0; index < size_arr; index++)
+        {
+            sum_check += arr[index];
+            auto rest = hashmap.find(sum_check - sum);
+            if (rest != hashmap.end())
+            {
+                printArr(arr, index, hashmap[rest->first]);
+            }
+            hashmap[sum_check].push_back(index);
+        }
     }
 }
 

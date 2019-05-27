@@ -216,15 +216,17 @@ void TestSumFour()
     int sum = 7;
     int size_arr = sizeof(arr)/sizeof(arr[0]);
     FindElements<int> fe_i;
-    if (fe_i.sumFours(arr,size_arr,sum))
-    {
-        std::cout << "Yes\n" << std::endl; 
-    }
-    else 
-    {
-        std::cout << "No\n" << std::endl;
-    }
-    
+    fe_i.sumFours(arr, size_arr, sum);
+}
+
+void TestSumSubarr()
+{
+    int arr[] = {3,4,-7,1,3,3,1,-4};
+    int sum = 7;
+    int size_arr = sizeof(arr)/sizeof(arr[0]);
+
+    FindElements<int> fe_i;
+    fe_i.sumSubArr(arr, size_arr, sum);
 }
 
 int main (int argc, char const* argv[])
@@ -233,8 +235,10 @@ int main (int argc, char const* argv[])
     {
         /*TestPrintBinaryTreeHash();
         TestUnionIntersetLL();
-        TestSumPair();*/
-        TestSumFour();
+        TestSumPair();
+        TestSumFour();*/
+        TestSumSubarr();
+
     }
     catch(const std::exception& e)
     {

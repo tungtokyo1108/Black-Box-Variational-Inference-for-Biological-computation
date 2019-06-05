@@ -71,7 +71,7 @@ class Arrow3D(FancyArrowPatch):
         self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
         FancyArrowPatch.draw(self, renderer)
 
-axes = [5, 15, 1, 5, 1, 3]
+axes = [6.5, 14.5, 1, 3.5, 1, 3]
 x1s = np.linspace(axes[0], axes[1], 10)
 x2s = np.linspace(axes[2], axes[3], 10)
 x1, x2 = np.meshgrid(x1s, x2s)
@@ -82,25 +82,34 @@ z = (R[0,2] * x1 + R[1,2] * x2) / (1 - R[2,2])
 
 from mpl_toolkits.mplot3d import Axes3D
 
-fig = plt.figure(figsize=(15,10))
+fig = plt.figure(figsize=(20,20))
 ax = fig.add_subplot(111, projection='3d')
 
 X = data_3d.dropna().values
+#ax.scatter(X[:,0], X[:,1], X[:,2])
 X3D_above = X[X[:, 2] > data_3d_inv[:, 2]]
 X3D_below = X[X[:, 2] <= data_3d_inv[:, 2]]
 
-ax.plot(X3D_below[:, 0], X3D_below[:, 1], X3D_below[:, 2], "bo", alpha=0.5)
-ax.plot_surface(x1,x2,z,alpha=0.2, color="k")
+# Data points below the surface projection 
+ax.plot(X3D_below[:, 0], X3D_below[:, 1], X3D_below[:, 2], "bo", alpha=0.5, color="b")
+
+# The surface projection 
+ax.plot_surface(x1,x2,z,alpha=0.1, color="k")
 np.linalg.norm(C, axis=0)
+
 for i in range(377):
     if X[i, 2] > data_3d_inv[i, 2]:
-        ax.plot([X[i][0], data_3d_inv[i][0]], [X[i][1], data_3d_inv[i][1]], [X[i][2], data_3d_inv[i][2]], "k-", color="y")
+        ax.plot([X[i][0], data_3d_inv[i][0]], [X[i][1], data_3d_inv[i][1]], [X[i][2], data_3d_inv[i][2]], "k-", color="r")
     else:
-        ax.plot([X[i][0], data_3d_inv[i][0]], [X[i][1], data_3d_inv[i][1]], [X[i][2], data_3d_inv[i][2]], "k-", color="y")
-        
-ax.plot(data_3d_inv[:, 0], data_3d_inv[:, 1], data_3d_inv[:, 2], "k+", color="red")
-ax.plot(data_3d_inv[:, 0], data_3d_inv[:, 1], data_3d_inv[:, 2], "k.", color="red")
-ax.plot(X3D_above[:, 0], X3D_above[:, 1], X3D_above[:, 2], "bo", color="green", alpha=0.5)
+        ax.plot([X[i][0], data_3d_inv[i][0]], [X[i][1], data_3d_inv[i][1]], [X[i][2], data_3d_inv[i][2]], "k-", color="r")
+
+# The points projection         
+ax.plot(data_3d_inv[:, 0], data_3d_inv[:, 1], data_3d_inv[:, 2], "k+", color="r", alpha=1)
+ax.plot(data_3d_inv[:, 0], data_3d_inv[:, 1], data_3d_inv[:, 2], "k.", color="r", alpha=1)
+
+# Data points above the surface projection
+ax.plot(X3D_above[:, 0], X3D_above[:, 1], X3D_above[:, 2], "bo", color="g", alpha=0.5)
+
 ax.set_xlabel("Seed length", fontsize=18, labelpad=10)
 ax.set_ylabel("Seed width", fontsize=18, labelpad=10)
 ax.set_zlabel("Seed volume", fontsize=18, labelpad=10)
@@ -123,11 +132,23 @@ pca.fit(data_PCA.dropna())
 print('First 4 principal components:\n', pca.components_[0:4])
 print('EXplained variance ratio:\n', pca.explained_variance_ratio_)
 
+plt.figure(figsize=(15,10))
+plt.plot(np.cumsum(pca.explained_variance_ratio_))
+plt.xlabel('Number of component', fontsize=15)
+plt.ylabel('Cumulative explained variance', fontsize=15)
+
+
 pca4 = PCA(n_components=4)
 pca4.fit(data_PCA.dropna())
 data_PCA_tranf = pca4.transform(data_PCA.dropna())
 
-print('Explained variance ratio:', pca4.explained_variance_ratio_)
+# Recover the original data from the projected data 
+# There was some lost information during the projection step, 
+# let compute the reconstruction error and percent lost of the variance  
+data_recov = pca4.inverse_transform(data_PCA_tranf)
+print('\nThe reconstruction error: ', np.mean(np.sum(np.square(data_recov - data_PCA.dropna()), axis=1)))
+print('\nExplained variance ratio:\n', pca4.explained_variance_ratio_)
+print('\nThe ratio of lost of the variance: ', 1 - pca4.explained_variance_ratio_.sum())
 
 fig, ax = plt.subplots(1, 3, figsize=(20,5))
 
@@ -150,51 +171,3 @@ print('first pca component:\n', pca4.components_[0])
 print('\nsecond pca component:\n', pca4.components_[1])
 print('\nthrid pca component:\n', pca4.components_[2])
 print('\nfourth pca component:\n', pca4.components_[3])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

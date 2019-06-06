@@ -143,8 +143,8 @@ pca4.fit(data_PCA.dropna())
 data_PCA_tranf = pca4.transform(data_PCA.dropna())
 
 # Recover the original data from the projected data 
-# There was some lost information during the projection step, 
-# let compute the reconstruction error and percent lost of the variance  
+# There was some loss information during the projection step, 
+# let compute the reconstruction error and percent loss of the variance  
 data_recov = pca4.inverse_transform(data_PCA_tranf)
 print('\nThe reconstruction error: ', np.mean(np.sum(np.square(data_recov - data_PCA.dropna()), axis=1)))
 print('\nExplained variance ratio:\n', pca4.explained_variance_ratio_)
@@ -171,3 +171,51 @@ print('first pca component:\n', pca4.components_[0])
 print('\nsecond pca component:\n', pca4.components_[1])
 print('\nthrid pca component:\n', pca4.components_[2])
 print('\nfourth pca component:\n', pca4.components_[3])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

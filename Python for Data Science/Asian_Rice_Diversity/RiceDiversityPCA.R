@@ -1,3 +1,7 @@
+# Reference: http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/112-pca-principal-component-analysis-essentials/
+#            http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/#prcomp-and-princomp-functions
+# @author: tungutokyo
+
 # this data set was analyzed in Zhao 2011 (Nature Communications 2:467)
 line <- read.csv("RiceDiversityLine.csv")
 pheno <- read.csv("RiceDiversityPheno.csv")

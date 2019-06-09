@@ -126,14 +126,15 @@ Col_PCA = ['Flag leaf length', 'Flag leaf width', 'Plant height', 'Panicle lengt
             'Seed length', 'Seed width', 'Seed volume', 'Seed surface area']
 data_PCA = data[Col_PCA]
 
-pca = PCA()
-pca.fit(data_PCA.dropna())
+pca_full = PCA()
+pca_full.fit(data_PCA.dropna())
+data_PCA_full_tranf = pca_full.transform(data_PCA.dropna())
 
-print('First 4 principal components:\n', pca.components_[0:4])
-print('EXplained variance ratio:\n', pca.explained_variance_ratio_)
+print('First 4 principal components:\n', pca_full.components_[0:4])
+print('EXplained variance ratio:\n', pca_full.explained_variance_ratio_)
 
 plt.figure(figsize=(15,10))
-plt.plot(np.cumsum(pca.explained_variance_ratio_))
+plt.plot(np.cumsum(pca_full.explained_variance_ratio_))
 plt.xlabel('Number of component', fontsize=15)
 plt.ylabel('Cumulative explained variance', fontsize=15)
 
@@ -172,14 +173,51 @@ print('\nsecond pca component:\n', pca4.components_[1])
 print('\nthrid pca component:\n', pca4.components_[2])
 print('\nfourth pca component:\n', pca4.components_[3])
 
+def pca_results(data, pca):
+    
+    # Dimension indexing 
+    dimensions = ['Dimension {}'.format(i) for i in range(1, len(pca.components_)+1)]
+    
+    # PCA components
+    components = pd.DataFrame(np.round(pca.components_, 4), columns = data.keys())
+    components.index = dimensions
+    
+    # PCA explained variance 
+    ratios = pca.explained_variance_ratio_.reshape(len(pca.components_), 1)
+    variance_ratios = pd.DataFrame(np.round(ratios, 4), columns = ['Explained Variance'])
+    variance_ratios.index = dimensions
+    
+    fig, ax = plt.subplots(figsize=(10,15))
+    
+    components.plot(ax=ax, kind='barh')
+    ax.set_xlabel("Feature Weights", fontsize=15)
+    ax.set_yticklabels(dimensions, rotation=0)
+    
+    for i, ev in enumerate(pca.explained_variance_ratio_):
+        ax.text(ax.get_xlim()[1] + 0.05, i-0.1, "Explained Variance\n %.4f"%(ev), rotation=-90)
+        
+    return pd.concat([variance_ratios, components], axis = 1)
 
+pca_results(data_PCA, pca4)
 
+# Calculation eigenvector
+def centerData(X):
+    X = X.copy()
+    X -= np.mean(X, axis=0)
+    return X
 
+data_center_PCA = centerData(data_PCA.dropna())
 
+# Eigen Decomposition 
+eigVals, eigVecs = np.linalg.eig(data_center_PCA.T.dot(data_center_PCA))
+data_center_project = np.dot(eigVecs.T, data_center_PCA.T)
 
+# SVD Decomposition 
+# https://github.com/scikit-learn/scikit-learn/blob/7813f7efb/sklearn/decomposition/pca.py#L325
+# https://github.com/scikit-learn/scikit-learn/blob/master/sklearn/utils/extmath.py
 
-
-
+U, S, Vt = sp.linalg.svd(data_center_PCA, full_matrices=False)
+V = Vt.T
 
 
 

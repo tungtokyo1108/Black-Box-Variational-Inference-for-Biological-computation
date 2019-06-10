@@ -23,6 +23,7 @@ from sklearn.linear_model import Lasso
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.decomposition import PCA
+sns.set_context('poster')
 sns.set(style="ticks")
 
 ###############################################################################
@@ -123,12 +124,14 @@ ax.set_zlabel("Seed volume", fontsize=18, labelpad=10)
 ###############################################################################
 
 Col_PCA = ['Flag leaf length', 'Flag leaf width', 'Plant height', 'Panicle length', 
-            'Seed length', 'Seed width', 'Seed volume', 'Seed surface area']
-data_PCA = data[Col_PCA]
+            'Seed length', 'Seed width', 'Seed volume', 'Seed surface area', 'Sub-population']
+data_PCA_target = data[Col_PCA]
+data_PCA = data_PCA_target.dropna().sample(frac=1, random_state=42).reset_index(drop=True)
+data_PCA_clear = data_PCA.drop(['Sub-population'], axis=1)
 
 pca_full = PCA()
-pca_full.fit(data_PCA.dropna())
-data_PCA_full_tranf = pca_full.transform(data_PCA.dropna())
+pca_full.fit(data_PCA_clear)
+data_PCA_full_tranf = pca_full.transform(data_PCA_clear)
 
 print('First 4 principal components:\n', pca_full.components_[0:4])
 print('EXplained variance ratio:\n', pca_full.explained_variance_ratio_)
@@ -140,14 +143,14 @@ plt.ylabel('Cumulative explained variance', fontsize=15)
 
 
 pca4 = PCA(n_components=4)
-pca4.fit(data_PCA.dropna())
-data_PCA_tranf = pca4.transform(data_PCA.dropna())
+pca4.fit(data_PCA_clear)
+data_PCA_tranf = pca4.transform(data_PCA_clear)
 
 # Recover the original data from the projected data 
 # There was some loss information during the projection step, 
 # let compute the reconstruction error and percent loss of the variance  
 data_recov = pca4.inverse_transform(data_PCA_tranf)
-print('\nThe reconstruction error: ', np.mean(np.sum(np.square(data_recov - data_PCA.dropna()), axis=1)))
+print('\nThe reconstruction error: ', np.mean(np.sum(np.square(data_recov - data_PCA_clear), axis=1)))
 print('\nExplained variance ratio:\n', pca4.explained_variance_ratio_)
 print('\nThe ratio of lost of the variance: ', 1 - pca4.explained_variance_ratio_.sum())
 
@@ -189,16 +192,17 @@ def pca_results(data, pca):
     
     fig, ax = plt.subplots(figsize=(10,15))
     
-    components.plot(ax=ax, kind='barh')
+    components.plot(ax=ax, kind='barh', fontsize=10)
     ax.set_xlabel("Feature Weights", fontsize=15)
-    ax.set_yticklabels(dimensions, rotation=0)
+    ax.set_yticklabels(dimensions, rotation=0, fontsize=10)
     
     for i, ev in enumerate(pca.explained_variance_ratio_):
-        ax.text(ax.get_xlim()[1] + 0.05, i-0.1, "Explained Variance\n %.4f"%(ev), rotation=-90)
+        ax.text(ax.get_xlim()[1] + 0.05, i-0.1, "Explained Variance\n %.4f"%(ev), rotation=-90, fontsize=10)
         
     return pd.concat([variance_ratios, components], axis = 1)
 
-pca_results(data_PCA, pca4)
+sns.set_context("poster")
+pca_results(data_PCA_clear, pca_full)
 
 # Calculation eigenvector
 def centerData(X):
@@ -206,54 +210,52 @@ def centerData(X):
     X -= np.mean(X, axis=0)
     return X
 
-data_center_PCA = centerData(data_PCA.dropna())
+data_center_PCA = centerData(data_PCA_clear)
 
 # Eigen Decomposition 
 eigVals, eigVecs = np.linalg.eig(data_center_PCA.T.dot(data_center_PCA))
-data_center_project = np.dot(eigVecs.T, data_center_PCA.T)
+data_center_project_t = np.dot(eigVecs.T, data_center_PCA.T)
+data_center_project = data_center_project_t.T
 
 # SVD Decomposition 
 # https://github.com/scikit-learn/scikit-learn/blob/7813f7efb/sklearn/decomposition/pca.py#L325
 # https://github.com/scikit-learn/scikit-learn/blob/master/sklearn/utils/extmath.py
-
 U, S, Vt = sp.linalg.svd(data_center_PCA, full_matrices=False)
 V = Vt.T
 
+# Correlation between the original variable and the principal component score.
+# coef_PCA = pca_full.components_
+data_PCA_tran = pd.DataFrame(np.round(data_PCA_full_tranf, 6), 
+                             columns = ['PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'PC7', 'PC8'])
+data_corr_pca = pd.concat([data_PCA_clear, data_PCA_tran], axis = 1)
+corr_pca = data_corr_pca.corr()
+corr_pca_col = corr_pca.drop(['Flag leaf length', 'Flag leaf width', 'Plant height', 'Panicle length', 
+            'Seed length', 'Seed width', 'Seed volume', 'Seed surface area'], axis=1)
+corr_pca_clear = corr_pca_col.drop(['PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'PC7', 'PC8'])
+plt.figure(figsize=(15,15))
+cmap = sns.diverging_palette(220, 10, as_cmap=True)
+corr_pca_hm = sns.heatmap(round(corr_pca_clear, 6), annot=True, fmt='.6f', 
+                          cmap=cmap, annot_kws={"size":10}, linewidths=.05)
+plt.title('Correlation between PC and variables', fontsize=20)
+
+ind = corr_pca_clear.index
+fig, ax = plt.subplots(figsize=(10,10))
+x_cir = np.linspace(-1,1,10000)
+y_cir = np.sqrt(1-(x_cir**2))
+ax.plot(x_cir, y_cir, sns.color_palette().as_hex()[0])
+ax.plot(x_cir, -y_cir, sns.color_palette().as_hex()[0])
+ax.plot([0,0], [-1,1], "k--", linewidth=3, color='r')
+ax.plot([-1,1], [0,0], "k--", linewidth=3, color='r')
+ax.set_xlabel('Dimension 1 ({}%)'.format(round(pca_full.explained_variance_ratio_[0]*100, 2)), fontsize=15)
+ax.set_ylabel('Dimension 2 ({}%)'.format(round(pca_full.explained_variance_ratio_[1]*100, 2)), fontsize=15)
+ax.set_title('Circle of correlation', fontsize=20)
+for idx in ind:
+    x = corr_pca_clear['PC1'][idx]
+    y = corr_pca_clear['PC2'][idx]
+    ax.arrow(0,0,x,y,head_width=0.05, head_length=0.01, color='b')
+    ax.text(x,y,idx, size=15, ha='left', va='center')
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+y_target = data_PCA['Sub-population']
+data_bitplot = pd.concat([data_PCA_tran, y_target], axis=1)
+g = sns.pairplot(data_bitplot, hue="Sub-population", palette="husl")

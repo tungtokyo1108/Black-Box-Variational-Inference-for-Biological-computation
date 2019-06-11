@@ -255,7 +255,21 @@ for idx in ind:
     ax.arrow(0,0,x,y,head_width=0.05, head_length=0.01, color='b')
     ax.text(x,y,idx, size=15, ha='left', va='center')
 
-
+# Bit plot for Sub-population 
+    
 y_target = data_PCA['Sub-population']
 data_bitplot = pd.concat([data_PCA_tran, y_target], axis=1)
+
+# All pairs of PC 
 g = sns.pairplot(data_bitplot, hue="Sub-population", palette="husl")
+
+# Specific pair of PC
+fig , ax = plt.subplots(2,2, figsize=(20,20))
+ax[0,0] = sns.scatterplot(x="PC1", y="PC2", hue="Sub-population", size="Sub-population", sizes=(20,200),
+                     data=data_bitplot, alpha=0.5, ax=ax[0,0])
+ax[0,1] = sns.scatterplot(x="PC2", y="PC3", hue="Sub-population", size="Sub-population",
+                      sizes=(20,200), data=data_bitplot, alpha=0.5, ax=ax[0,1])
+ax[1,0] = sns.scatterplot(x="PC3", y="PC4", hue="Sub-population", size="Sub-population", sizes=(20,200),
+                     data=data_bitplot, alpha=0.5, ax=ax[1,0])
+ax[1,1] = sns.scatterplot(x="PC4", y="PC1", hue="Sub-population", size="Sub-population",
+                      sizes=(20,200), data=data_bitplot, alpha=0.5, ax=ax[1,1])

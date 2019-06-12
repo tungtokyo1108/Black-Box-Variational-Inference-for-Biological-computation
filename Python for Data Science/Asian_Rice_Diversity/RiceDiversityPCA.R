@@ -143,20 +143,3 @@ fviz_pca_biplot(res, axes = c(3,4),
                 gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE,
                 legend.title = list(fill = "Sub-population", color = "Contrib",
                                     alpha = "Contrib"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

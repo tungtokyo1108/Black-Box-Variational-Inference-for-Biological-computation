@@ -114,9 +114,11 @@ corrd[,1:4]
 cos2 <- res.var$cos2
 cos2[,1:4]
 ```
+
 ```{r fig.height = 8, fig.width = 8}
 fviz_pca_var(res, axes = c(1,2), col.var = "cos2", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE)
 ```
+
 ```{r fig.height = 8, fig.width = 8}
 fviz_pca_var(res, axes = c(3,4), col.var = "cos2", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE)
 ```

@@ -1,7 +1,3 @@
-# Reference: http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/112-pca-principal-component-analysis-essentials/
-#            http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/#prcomp-and-princomp-functions
-# @author: tungutokyo
-
 # this data set was analyzed in Zhao 2011 (Nature Communications 2:467)
 line <- read.csv("RiceDiversityLine.csv")
 pheno <- read.csv("RiceDiversityPheno.csv")
@@ -10,26 +6,37 @@ line.pheno <- merge(line, pheno, by.x = "NSFTV.ID", by.y = "NSFTVID")
 alldata <- merge(line.pheno, geno, by.x = "NSFTV.ID", by.y = "NSFTVID")
 
 mydata <- data.frame(
+  # Flowering time 
   flower.Aber = alldata$Flowering.time.at.Aberdeen,
   flower.Ark = alldata$Flowering.time.at.Arkansas,
-  flower.Fari = alldata$Flowering.time.at.Faridpur, 
-  cul = alldata$Culm.habit,
-  leafpub = alldata$Leaf.pubescence, 
+  flower.Fari = alldata$Flowering.time.at.Faridpur,
+  # Morphology
+  culm = alldata$Culm.habit,
   leaf.length = alldata$Flag.leaf.length,
   leaf.width  = alldata$Flag.leaf.width,
+  # Yeild components
   plant.height = alldata$Plant.height,
   panicle.length = alldata$Panicle.length,
-  pri.pan.bran = alldata$Primary.panicle.branch.number,
-  seed.pani = alldata$Seed.number.per.panicle,
-  flor.pani = alldata$Florets.per.panicle,
+  pri.panicle.branch = alldata$Primary.panicle.branch.number,
+  seed.panicle = alldata$Seed.number.per.panicle,
+  flor.panicle = alldata$Florets.per.panicle,
+  panicle.fertility = alldata$Panicle.fertility,
+  # Seed morphology
   seed.length = alldata$Seed.length,
   seed.width = alldata$Seed.width,
   seed.volum = alldata$Seed.volume,
   seed.surface = alldata$Seed.surface.area,
-  Brown.length = alldata$Brown.rice.seed.length,
-  Brown.width = alldata$Brown.rice.seed.width,
-  Brown.surface = alldata$Brown.rice.surface.area,
-  Brown.volume = alldata$Brown.rice.volume
+  brown.length = alldata$Brown.rice.seed.length,
+  brown.width = alldata$Brown.rice.seed.width,
+  brown.surface = alldata$Brown.rice.surface.area,
+  brown.volume = alldata$Brown.rice.volume,
+  # Stress tolerance
+  straighhead = alldata$Straighthead.suseptability,
+  blast = alldata$Blast.resistance,
+  # Quality 
+  amylose = alldata$Amylose.content,
+  alkali.spreading = alldata$Alkali.spreading.value,
+  protein = alldata$Protein.content
 )
 missing <- apply(is.na(mydata), 1, sum) > 0
 mydata <- mydata[!missing, ]
@@ -66,8 +73,10 @@ fviz_eig(res, addlabels = TRUE, ylim = c(0, 35))
 res.var <- get_pca_var(res)
 res.var$cor    # Correlations between variables and dimensions
 corrplot(res.var$cor, is.corr=FALSE)
-fviz_pca_var(res, col.var = "black", repel = TRUE)
+op <- par(mfrow = c(1,2))
+fviz_pca_var(res, axes = c(1,2), col.var = "black", repel = TRUE)
 fviz_pca_var(res, axes = c(3,4), col.var = "black", repel = TRUE)
+par(op)
 fviz_pca_var(res, axes = c(5,6), col.var = "black", repel = TRUE)
 
 # Coordinates of variabels to create a scatter plot
@@ -112,11 +121,11 @@ fviz_pca_var(res, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "
              repel = TRUE)
 
 ind <- get_pca_ind(res)
-fviz_pca_ind(res, geom.ind = "point", col.ind = subpop, 
+fviz_pca_ind(res, geom.ind = "point", col.ind = subpop,
              addEllipses = TRUE, axes = c(1,2), ellipse.type = "confidence",
              legend.title = "Sub-population")
 fviz_pca_ind(res, geom.ind = "point", col.ind = subpop, 
-             addEllipses = TRUE, axes = c(3,4), ellipse.type = "convex",
+             addEllipses = TRUE, axes = c(3,4), ellipse.type = "confidence",
              legend.title = "Sub-population")
 
 # Bitplot
@@ -125,7 +134,7 @@ fviz_pca_biplot(res, axes = c(1,2),
                 geom.ind = "point", 
                 fill.ind = subpop, 
                 pointshape = 21, pointsize = 2, 
-                #addEllipses = TRUE,
+                addEllipses = TRUE, ellipse.type = "confidence",
                 # Varibles
                 alpha.var = "contrib", col.var = "contrib",
                 gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE,
@@ -137,7 +146,7 @@ fviz_pca_biplot(res, axes = c(3,4),
                 geom.ind = "point", 
                 fill.ind = subpop, 
                 pointshape = 21, pointsize = 2, 
-                # addEllipses = TRUE,
+                addEllipses = TRUE, ellipse.type = "confidence",
                 # Varibles
                 col.var = "contrib",alpha.var = "contrib",
                 gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE,

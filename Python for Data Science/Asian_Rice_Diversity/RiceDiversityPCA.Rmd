@@ -1,0 +1,201 @@
+---
+title: "Dimensionality reduction"
+author: 'Data Scientist: Tung Dang'
+date: "6/12/2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data source 
+This data set was analyzed in Zhao 2011 (Nature Communications 2:467)
+```{r}
+line <- read.csv("RiceDiversityLine.csv")
+pheno <- read.csv("RiceDiversityPheno.csv")
+geno <- read.csv("RiceDiversityGeno.csv")
+line.pheno <- merge(line, pheno, by.x = "NSFTV.ID", by.y = "NSFTVID")
+alldata <- merge(line.pheno, geno, by.x = "NSFTV.ID", by.y = "NSFTVID")
+```
+
+```{r}
+mydata <- data.frame(
+  # Flowering time 
+  flower.Aber = alldata$Flowering.time.at.Aberdeen,
+  flower.Ark = alldata$Flowering.time.at.Arkansas,
+  flower.Fari = alldata$Flowering.time.at.Faridpur,
+  # Morphology
+  culm = alldata$Culm.habit,
+  leaf.length = alldata$Flag.leaf.length,
+  leaf.width  = alldata$Flag.leaf.width,
+  # Yeild components
+  plant.height = alldata$Plant.height,
+  panicle.length = alldata$Panicle.length,
+  pri.panicle.branch = alldata$Primary.panicle.branch.number,
+  seed.panicle = alldata$Seed.number.per.panicle,
+  flor.panicle = alldata$Florets.per.panicle,
+  panicle.fertility = alldata$Panicle.fertility,
+  # Seed morphology
+  seed.length = alldata$Seed.length,
+  seed.width = alldata$Seed.width,
+  seed.volum = alldata$Seed.volume,
+  seed.surface = alldata$Seed.surface.area,
+  brown.length = alldata$Brown.rice.seed.length,
+  brown.width = alldata$Brown.rice.seed.width,
+  brown.surface = alldata$Brown.rice.surface.area,
+  brown.volume = alldata$Brown.rice.volume,
+  # Stress tolerance
+  straighhead = alldata$Straighthead.suseptability,
+  blast = alldata$Blast.resistance,
+  # Quality 
+  amylose = alldata$Amylose.content,
+  alkali.spreading = alldata$Alkali.spreading.value,
+  protein = alldata$Protein.content
+)
+missing <- apply(is.na(mydata), 1, sum) > 0
+mydata <- mydata[!missing, ]
+subpop <- alldata$Sub.population[!missing]
+```
+
+# PCA analysis 
+## 1. Computation PCA function 
+```{r}
+res <- prcomp(mydata, scale = T)
+summary(res)
+```
+
+## 2. Results
+```{r}
+library("factoextra")
+library("corrplot")
+fviz_eig(res, addlabels = TRUE, ylim = c(0, 35))
+```
+
+The results show that if we based on the first rule is 80%, the first six principal components with a cumulative contribution of 85.4% are selected. Next, based on the second rule, the first four principal components whose contribution rate exceeds 1/20 = 5% are selected. Moreover, the eigenvalues decreases rapidly until the fourth principal component, and then decreases gradually. 
+Combining the above rules, the first four or six components are considered to be appropriate number of principal components. 
+
+### 2.1. Correlations between variables and dimensions
+```{r}
+res.var <- get_pca_var(res)
+corr <- res.var$cor   
+corrplot(res.var$cor, is.corr=FALSE)
+```
+
+```{r fig.height = 8, fig.width = 8}
+fviz_pca_var(res, axes = c(1,2), col.var = "black", repel = TRUE)
+```
+
+```{r fig.height = 8, fig.width = 8}
+fviz_pca_var(res, axes = c(3,4), col.var = "black", repel = TRUE)
+```
+
+```{r fig.height = 8, fig.width = 8}
+fviz_pca_var(res, axes = c(5,6), col.var = "black", repel = TRUE)
+```
+
+- The results show the correlation coefficient between the value of original variables and the principal component score. Most of the original variables had the strong correlation with first principal component score, meanwhile there are weak correlation with five and six principal component score. 
+- With first and second principal component scores, grain morphology group has the strong negative correlations with first principal component but there are strong positive correlations with the second principal component. In contrast, groups of plant morphology, flowering time have the strong positive correlations with both first and second principal component scores. 
+- There are the large numbers of original variables in three groups that have the negative correlations with the four principal component score. The grain morphology group, excepted Brown rice seed length and Seed length has the negative correlation with both third and four principal component scores. 
+
+### 2.2. Coordinates of variabels
+```{r}
+corrd <- res.var$coord
+corrd[,1:4]
+```
+
+### 2.3. Quality of representation
++ Indicate the contribution of a component to the squared distance of the observation to the origin
++ Components with a large value of cos2 contribute a relatively large portion to the total distance and therefore these components are importance for that observation
++ The closer a variable is to the circle of correlation, the better its representation on the factor map (the more important it is to interpret components)
+```{r}
+cos2 <- res.var$cos2
+cos2[,1:4]
+```
+```{r fig.height = 8, fig.width = 8}
+fviz_pca_var(res, axes = c(1,2), col.var = "cos2", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE)
+```
+```{r fig.height = 8, fig.width = 8}
+fviz_pca_var(res, axes = c(3,4), col.var = "cos2", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE)
+```
+
+### 2.4. Contributions of the variables
+- Contributions of the variables in accounting for the variability in a given principal component are expressed in percentage
+- Variables that are correlated with PC1 and PC2 are the most important in explaining the variability in the data set
+- Variables that do not correlated with any PC or correlated with the last dimension are variables with low contribution and migh be removed to simplify the overall analysis
+```{r}
+contrib <- res.var$contrib
+contrib[,1:4]
+```
+```{r fig.height = 5, fig.width = 8}
+fviz_contrib(res, choice = "var", axes = 1)
+```
+```{r fig.height = 5, fig.width = 8}
+fviz_contrib(res, choice = "var", axes = 2)
+```
+```{r fig.height = 5, fig.width = 8}
+fviz_contrib(res, choice = "var", axes = 3)
+```
+```{r fig.height = 5, fig.width = 8}
+fviz_contrib(res, choice = "var", axes = 4)
+```
+
+The red dashed line on the graph above indices the expected average contribution. If contribution of the variables were uniform, the expected value would be $1/length(variables) = 1/20$.
+
+```{r fig.height = 8, fig.width = 8}
+fviz_pca_var(res, axes = c(1,2), col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE)
+```
+
+```{r fig.height = 8, fig.width = 8}
+fviz_pca_var(res, axes = c(3,4), col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE)
+```
+
+### 2.5. Biplot
+```{r fig.height = 8, fig.width = 10}
+fviz_pca_biplot(res, axes = c(1,2), 
+                # Individuals
+                geom.ind = "point", 
+                fill.ind = subpop, 
+                pointshape = 21, pointsize = 2, 
+                addEllipses = TRUE, ellipse.type = "confidence",
+                # Varibles
+                alpha.var = "contrib", col.var = "contrib",
+                gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE,
+                legend.title = list(fill = "Sub-population", color = "Contrib",
+                                    alpha = "Contrib"))
+```
+
+```{r fig.height = 8, fig.width = 10}
+fviz_pca_biplot(res, axes = c(3,4), 
+                # Individuals
+                geom.ind = "point", 
+                fill.ind = subpop, 
+                pointshape = 21, pointsize = 2, 
+                addEllipses = TRUE, ellipse.type = "confidence",
+                # Varibles
+                col.var = "contrib",alpha.var = "contrib",
+                gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE,
+                legend.title = list(fill = "Sub-population", color = "Contrib",
+                                    alpha = "Contrib"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

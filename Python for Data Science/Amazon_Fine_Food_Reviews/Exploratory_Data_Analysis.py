@@ -482,3 +482,134 @@ def top_tfidf_feats(row, features, top_n=25):
 
 top_tfidf = top_tfidf_feats(X_train_vectors[1,:].toarray()[0], tf_idf_obj.get_feature_names(), 25)
 top_tfidf
+
+with open('X_train_TFIDF.pkl', 'wb') as file:
+    pickle.dump(X_train_vectors, file)
+
+with open('y_train_TFIDF.pkl', 'wb') as file:
+    pickle.dump(y_train, file)
+    
+with open('X_test_TFIDF.pkl', 'wb') as file:
+    pickle.dump(X_test_vectors, file)
+    
+with open('y_test_TFIDF.pkl', 'wb') as file:
+    pickle.dump(y_test, file)
+    
+with open('X_calib_TFIDF.pkl', 'wb') as file:
+    pickle.dump(X_calib_vectors, file)
+    
+with open('y_calib_TFIDF.pkl', 'wb') as file:
+    pickle.dump(y_calib, file)
+
+
+"""
+The Average Word2Vec
+- Convert each word to a vector, sum them up and divide by the number of words in that particular sentence 
+"""
+word2vec_corpus = []
+for sentence in X_train:
+    # a list of words for each sentence for all the reviews 
+    word2vec_corpus.append(sentence.split())
+
+print("The size of the Word2Vec text corpus : ", len(word2vec_corpus))
+# With min_count=5 considers only those words for our model which occurs at lease 5 times 
+word2vec_model = Word2Vec(sentences=word2vec_corpus, size=200, min_count=5, workers=6)
+word2vec_words = list(word2vec_model.wv.vocab)
+print("The number of words that occured minimum 5 times : ", len(word2vec_words))
+
+def vectorize_w2v(dataset, word2vec_model, word2vec_words):
+    word2vec_corpus = []
+    for sentence in dataset:
+        word2vec_corpus.append(sentence.split())
+    # Create average Word2Vec model by computing the average word2vec for each review 
+    # The average word2vec for each sentence/review will be stored in list
+    sent_vectors = []
+    for sentence in tqdm(word2vec_corpus):
+        # 200 dimensional array, where all elements are zero. 
+        # This is used to add word vectors and find the averages at each iteration.
+        sent_vec = np.zeros(200)
+        count_words = 0
+        for word in sentence:
+            if word in word2vec_words:
+                word_vectors = word2vec_model.wv[word]
+                sent_vec += word_vectors
+                count_words += 1
+        if count_words != 0:
+            sent_vec /= count_words
+        sent_vectors.append(sent_vec)
+    sent_vectors = np.array(sent_vectors)
+    return sent_vectors
+
+X_train_vectors = vectorize_w2v(X_train, word2vec_model, word2vec_words)
+X_test_vectors = vectorize_w2v(X_test, word2vec_model, word2vec_words)
+X_calib_vectors = vectorize_w2v(X_calib, word2vec_model, word2vec_words)
+
+print("The shape of our Avg Word2Vec train vectorizer", X_train_vectors.shape)
+print("The shape of our Avg Word2Vec test vectorizer", X_test_vectors.shape)
+print("The shape of out Avg Word2Vec calib vectorizer", X_calib_vectors.shape)
+
+with open('X_train_W2V.pkl', 'wb') as file:
+    pickle.dump(X_train_vectors, file)
+
+with open('y_train_W2V.pkl', 'wb') as file:
+    pickle.dump(y_train, file)
+    
+with open('X_test_W2V.pkl', 'wb') as file:
+    pickle.dump(X_test_vectors, file)
+    
+with open('y_test_W2V.pkl', 'wb') as file:
+    pickle.dump(y_test, file)
+    
+with open('X_calib_W2V.pkl', 'wb') as file:
+    pickle.dump(X_calib_vectors, file)
+    
+with open('y_calib_W2V.pkl', 'wb') as file:
+    pickle.dump(y_calib, file)
+
+
+"""
+TFIDF weighted W2V 
+
+"""
+word2vec_corpus = []
+for sentence in X_train:
+    word2vec_corpus.append(sentence.split())
+
+word2vec_model = Word2Vec(sentences=word2vec_corpus, size=200, min_count=5, workers=8)
+word2vec_words = list(word2vec_model.wv.vocab)
+
+tf_idf_object = TfidfVectorizer(ngram_range=(1,1)).fit(X_train)
+
+def vectorize_tfidf_w2v(dataset, tf_idf_object, word2vec_model, word2vec_words):
+    
+    word2vec_corpus = []
+    for sentence in dataset:
+        word2vec_corpus.append(sentence.split())
+        
+    tf_idf_matrix = tf_idf_object.transform(dataset)
+    tfidf_features = tf_idf_object.get_feature_names()
+    
+    # Buld a dictionary with words as a key, and the idfs as value
+    dictionary = dict(zip(tf_idf_object.get_feature_names(), list(tf_idf_object.idf_)))
+    
+    # Algorithm for finding the TF-IDF weighted average word2vec vectors 
+    tfidf_sent_vectors = []
+    row = 0
+    for sentence in tqdm(word2vec_corpus):
+        sent_vec = np.zeros(200)
+        weight_sum = 0
+        for word in sentence:
+            if ((word in word2vec_words) and (word in tfidf_features)):
+                word_vectors = word2vec_model.wv[word]
+                tf_idf = dictionary[word]*(sentence.count(word)/len(sentence))
+                sent_vec += (word_vectors * tf_idf)
+                weight_sum += tf_idf
+        if weight_sum != 0:
+            sent_vec /= weight_sum
+        tfidf_sent_vectors.append(sent_vec)
+        row += 1
+    
+    tfidf_sent_vectors = np.array(tfidf_sent_vectors)
+    return tfidf_sent_vectors
+
+X_train_vectors = vectorize_tfidf_w2v(X_train, tf_idf_object, word2vec_model, word2vec_words)

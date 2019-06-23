@@ -548,24 +548,6 @@ print("The shape of our Avg Word2Vec train vectorizer", X_train_vectors.shape)
 print("The shape of our Avg Word2Vec test vectorizer", X_test_vectors.shape)
 print("The shape of out Avg Word2Vec calib vectorizer", X_calib_vectors.shape)
 
-with open('X_train_W2V.pkl', 'wb') as file:
-    pickle.dump(X_train_vectors, file)
-
-with open('y_train_W2V.pkl', 'wb') as file:
-    pickle.dump(y_train, file)
-    
-with open('X_test_W2V.pkl', 'wb') as file:
-    pickle.dump(X_test_vectors, file)
-    
-with open('y_test_W2V.pkl', 'wb') as file:
-    pickle.dump(y_test, file)
-    
-with open('X_calib_W2V.pkl', 'wb') as file:
-    pickle.dump(X_calib_vectors, file)
-    
-with open('y_calib_W2V.pkl', 'wb') as file:
-    pickle.dump(y_calib, file)
-
 
 """
 TFIDF weighted W2V 
@@ -613,3 +595,27 @@ def vectorize_tfidf_w2v(dataset, tf_idf_object, word2vec_model, word2vec_words):
     return tfidf_sent_vectors
 
 X_train_vectors = vectorize_tfidf_w2v(X_train, tf_idf_object, word2vec_model, word2vec_words)
+X_test_vectors = vectorize_tfidf_w2v(X_test, tf_idf_object, word2vec_model, word2vec_words)
+X_calib_vectors = vectorize_tfidf_w2v(X_calib, tf_idf_object, word2vec_model, word2vec_words)
+
+print("The shape of our TF-IDF Avg Word2Vec train vectorizer", X_train_vectors.shape)
+print("The shape of our TF-IDF Avg Word2Vec test vectorizer", X_test_vectors.shape)
+print("The shape of our TF-IDF Avg Word2Vec calib vectorizer", X_calib_vectors.shape)
+
+with open('X_train_TFIDF-W2V.pkl', 'wb') as file:
+    pickle.dump(X_train_vectors, file)
+
+with open('y_train_TFIDF-W2V.pkl', 'wb') as file:
+    pickle.dump(y_train, file)
+    
+with open('X_test_TFIDF-W2V.pkl', 'wb') as file:
+    pickle.dump(X_test_vectors, file)
+    
+with open('y_test_TFIDF-W2V.pkl', 'wb') as file:
+    pickle.dump(y_test, file)
+    
+with open('X_calib_TFIDF-W2V.pkl', 'wb') as file:
+    pickle.dump(X_calib_vectors, file)
+    
+with open('y_calib_TFIDF-W2V.pkl', 'wb') as file:
+    pickle.dump(y_calib, file)

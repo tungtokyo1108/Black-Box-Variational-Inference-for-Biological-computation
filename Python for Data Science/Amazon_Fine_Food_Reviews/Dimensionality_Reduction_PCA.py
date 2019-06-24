@@ -164,52 +164,64 @@ pca_vis(X_train_vectors, labels)
 ######################### TFIDF weighted W2V ##################################
 ###############################################################################
 
+# Store the list of words for each review 
+word2vec_corpus = []
+for sentence in X_train:
+    word2vec_corpus.append(sentence.split())
+    
+# Consider only those words which occurs at least 5 times with min_count=5
+word2vec_model = Word2Vec(sentences=word2vec_corpus, size=200, min_count=5, workers=8)
+word2vec_words = list(word2vec_model.wv.vocab)
 
+"""
+- Initializing the TF-IDF contructor with review texts
+- HTML tags and punctuations are removed 
+- Stopwords are preserved 
+"""
+tf_idf_object = TfidfVectorizer(ngram_range=(1,1)).fit(X_train)
 
+"""
+- This method returns the Average Word2Vec vectors for all reviews in a given dataset
+"""
+def vectorize_tfidf_w2v(dataset, tf_idf_object, word2vec_model, word2vec_words):
+    word2vec_corpus = []
+    for sentence in dataset:
+        word2vec_corpus.append(sentence.split())
+    
+    # Use the earlier TF-IDF object to vectorize test and cv data
+    tf_idf_matrix = tf_idf_object.transform(dataset)
+    tfidf_features = tf_idf_object.get_feature_names()
+    
+    # Build a dictionary with words as a key and the idfs as value
+    dictionary = dict(zip(tfidf_features, list(tf_idf_object.idf_)))
+    
+    # Algorithm for finding the TF-IDF weight average word2vec vectors 
+    tfidf_sent_vectors = []
+    row = 0
+    for sentence in tqdm(word2vec_corpus):
+        # This is used to add word vectors and find averages at each iteration
+        sent_vec = np.zeros(200)
+        # This will store the count of the words with a valid vector in each review text
+        weight_sum = 0
+        for word in sentence:
+            if ((word in word2vec_words) and (word in tfidf_features)):
+                word_vectors = word2vec_model.wv[word]
+                tf_idf = dictionary[word]*(sentence.count(word)/len(sentence))
+                sent_vec += (word_vectors * tf_idf)
+                weight_sum += tf_idf
+        if weight_sum != 0:
+            sent_vec /= weight_sum
+        tfidf_sent_vectors.append(sent_vec)
+        row += 1
+    
+    tfidf_sent_vectors = np.array(tfidf_sent_vectors)
+    return tfidf_sent_vectors
 
+X_train_vectors = vectorize_tfidf_w2v(X_train, tf_idf_object, word2vec_model, word2vec_words)
+X_train_vectors = standardize(X_train_vectors)
+        
+print ("The shape of our Avg Word2Vec train vectorizer ", X_train_vectors.shape)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+pca_redu(X_train_vectors)
+pca_vis(X_train_vectors, labels)
+    

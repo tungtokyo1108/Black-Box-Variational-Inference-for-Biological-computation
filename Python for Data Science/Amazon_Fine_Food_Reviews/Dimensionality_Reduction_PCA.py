@@ -93,8 +93,10 @@ def pca_redu(data):
     plt.plot(np.cumsum(pca.explained_variance_ratio_))
     plt.axis('tight')
     plt.grid()
+    plt.axhline(0.95, c='r')
     plt.xlabel("Number of components", fontsize=15)
     plt.ylabel("Cumulative explained variance", fontsize=15)
+    plt.legend()
 
 def pca_results(data, pca):
     

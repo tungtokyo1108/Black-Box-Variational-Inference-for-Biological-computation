@@ -257,7 +257,11 @@ tsne_50 = tsne(dataset, labels, 50)
 tsne_100 = tsne(dataset, labels, 100)
 sns.FacetGrid(tsne_20, hue="labels", hue_order=['Positive', 'Negative'], size=8).map(
         sns.scatterplot, 'Dimension 1', 'Dimension 2', edgecolor='w').add_legend()
+plt.title("T-SNE of Average Word2Vec with perplexity = 20 and n_iter = 5000", fontsize=15)
 sns.FacetGrid(tsne_50, hue="labels", hue_order=['Positive', 'Negative'], size=8).map(
         sns.scatterplot, 'Dimension 1', 'Dimension 2', edgecolor='w').add_legend()
+plt.title("T-SNE of Average Word2Vec with perplexity = 50 and n_iter = 5000", fontsize=15)
 sns.FacetGrid(tsne_100, hue="labels", hue_order=['Positive', 'Negative'], size=8).map(
         sns.scatterplot, 'Dimension 1', 'Dimension 2', edgecolor='w').add_legend()
+plt.title("T-SNE of Average Word2Vec with perplexity = 100 and n_iter = 5000", fontsize=15)
+plt.show()

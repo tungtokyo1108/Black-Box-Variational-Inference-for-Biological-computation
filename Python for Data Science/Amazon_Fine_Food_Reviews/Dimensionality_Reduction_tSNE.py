@@ -205,44 +205,59 @@ sns.FacetGrid(tsne_100, hue="labels", hue_order=['Positive', 'Negative'], size=8
 plt.title("T-SNE of TF-IDF with perplexity = 100 and n_iter = 5000", fontsize=15)
 
 
+""" The Average Word2Vec """
 
+connection_sqlobject = sqlite3.connect('sampled_dataset_PCA_10000.sqlite')
+sampled_dataset = pd.read_sql_query(""" SELECT * FROM Reviews """, connection_sqlobject)
 
+word2vec_corpus = []
+for sentence in sampled_dataset['RemovedHTML'].values:
+    word2vec_corpus.append(sentence.split())
+print(sampled_dataset['RemovedHTML'].values[0])
+print("-"*200)
+print(word2vec_corpus[0])
+print("The size of the word2vec text corpus : {}".format(len(word2vec_corpus)))
 
+# Consider only those words occurs at least 5 times 
+word2vec_model = Word2Vec(sentences=word2vec_corpus, size=100, min_count=5, workers=6)
+word2vec_words = list(word2vec_model.wv.vocab)
+print("The number of words that occured minimum 5 times : {}".format(len(word2vec_words)))
+print("The sample words from word2vec_words list : ", word2vec_words[0:50])
 
+# Check most similar words present for any given words
+word2vec_model.wv.most_similar('run')
 
+# The average word2vec for each sentence/review will be stored 
+sent_vectors = []
+for sentence in word2vec_corpus:
+    sent_vec = np.zeros(100)
+    count_words = 0
+    for word in sentence:
+        if word in word2vec_words:
+            word_vectors = word2vec_model.wv[word]
+            sent_vec += word_vectors
+            count_words += 1
+    if count_words != 0:
+        sent_vec /= count_words
+    sent_vectors.append(sent_vec)
+print("The length of the sentence vectors : {}".format(len(sent_vectors)))
+print("The size of each vector : {}".format(len(sent_vectors[0])))
+sent_vectors = np.array(sent_vectors)
 
+scalar = StandardScaler(with_mean=True)
+standardized_data = scalar.fit_transform(sent_vectors)
 
+dataset = pd.DataFrame(standardized_data)
+labels = sampled_dataset['SentimentPolarity']
 
+del(sent_vectors, standardized_data, sent_vec, sentence, sampled_dataset)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+tsne_20 = tsne(dataset, labels, 20)
+tsne_50 = tsne(dataset, labels, 50)
+tsne_100 = tsne(dataset, labels, 100)
+sns.FacetGrid(tsne_20, hue="labels", hue_order=['Positive', 'Negative'], size=8).map(
+        sns.scatterplot, 'Dimension 1', 'Dimension 2', edgecolor='w').add_legend()
+sns.FacetGrid(tsne_50, hue="labels", hue_order=['Positive', 'Negative'], size=8).map(
+        sns.scatterplot, 'Dimension 1', 'Dimension 2', edgecolor='w').add_legend()
+sns.FacetGrid(tsne_100, hue="labels", hue_order=['Positive', 'Negative'], size=8).map(
+        sns.scatterplot, 'Dimension 1', 'Dimension 2', edgecolor='w').add_legend()

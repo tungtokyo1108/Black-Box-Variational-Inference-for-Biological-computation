@@ -147,6 +147,12 @@ def tsne(dataset, labels, perplexity):
     tsne_df = pd.DataFrame(data=tsne_data, columns=("Dimension 1", "Dimension 2", "labels"))
     print("T-SNE plot for perplexity = {}".format(perplexity))
     return tsne_df
+
+def tsne_plot(dataset, labels, perplexity):
+    sns.FacetGrid(dataset, hue="labels", hue_order=["Positive", "Negative"], size=8).map(
+            sns.scatterplot, "Dimension 1", "Dimension 2", edgecolor="w").add_legend()
+    plt.title("T-SNE with perplexity = {} and n_iter = 5000".format(perplexity), fontsize=15)
+    plt.show()
     
 """ Bag of Words """
 
@@ -161,12 +167,7 @@ labels = sampled_dataset['SentimentPolarity']
 del(bow_matrix_10000, standardized_data, sampled_dataset)
 
 tsne_df = tsne(dataset, labels, 20)
-#plt.figure(figsize=(10,10))
-#sns.scatterplot(x="Dimension 1", y="Dimension 2", data=tsne_df, hue="labels")
-sns.FacetGrid(tsne_df, hue="labels", hue_order=["Positive", "Negative"], size=8).map(
-        plt.scatter, 'Dimension 1', 'Dimension 2', edgecolor="w").add_legend()
-plt.title("T-SNE of Bag of Words with perplexity = 20 and n_iter = 5000", fontsize=15)
-plt.show()
+tsne_plot(tsne_df, labels, 20)
 
 
 """ A TF-IDF model using RemovedHTML texts """
@@ -255,13 +256,6 @@ del(sent_vectors, standardized_data, sent_vec, sentence, sampled_dataset)
 tsne_20 = tsne(dataset, labels, 20)
 tsne_50 = tsne(dataset, labels, 50)
 tsne_100 = tsne(dataset, labels, 100)
-sns.FacetGrid(tsne_20, hue="labels", hue_order=['Positive', 'Negative'], size=8).map(
-        sns.scatterplot, 'Dimension 1', 'Dimension 2', edgecolor='w').add_legend()
-plt.title("T-SNE of Average Word2Vec with perplexity = 20 and n_iter = 5000", fontsize=15)
-sns.FacetGrid(tsne_50, hue="labels", hue_order=['Positive', 'Negative'], size=8).map(
-        sns.scatterplot, 'Dimension 1', 'Dimension 2', edgecolor='w').add_legend()
-plt.title("T-SNE of Average Word2Vec with perplexity = 50 and n_iter = 5000", fontsize=15)
-sns.FacetGrid(tsne_100, hue="labels", hue_order=['Positive', 'Negative'], size=8).map(
-        sns.scatterplot, 'Dimension 1', 'Dimension 2', edgecolor='w').add_legend()
-plt.title("T-SNE of Average Word2Vec with perplexity = 100 and n_iter = 5000", fontsize=15)
-plt.show()
+tsne_plot(tsne_20,labels,20)
+tsne_plot(tsne_50,labels,50)
+tsne_plot(tsne_100,labels,100)

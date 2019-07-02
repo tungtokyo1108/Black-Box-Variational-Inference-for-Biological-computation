@@ -229,6 +229,24 @@ void TestSumSubarr()
     fe_i.sumSubArr(arr, size_arr, sum);
 }
 
+void TestConcat()
+{
+    int arr1[] = {1,2,3,4,5}; 
+    int arr2[] = {4,5,6,7,8,9,1};
+    int size_arr1 = sizeof(arr1)/sizeof(int);
+    int size_arr2 = sizeof(arr2)/sizeof(int);
+    FindElements<int> fe_cc;
+    fe_cc.concat(arr1, arr2, size_arr1, size_arr2);
+
+    char arr3[] = "abcs";
+    char arr4[] = "cxzca";
+    int size_arr3 = sizeof(arr3)/sizeof(arr3[0]);
+    int size_arr4 = sizeof(arr4)/sizeof(arr4[0]);
+    FindElements<char> fe_str;
+    fe_str.concat(arr3, arr4, size_arr3, size_arr4);
+
+}
+
 int main (int argc, char const* argv[])
 {
     try
@@ -236,8 +254,9 @@ int main (int argc, char const* argv[])
         /*TestPrintBinaryTreeHash();
         TestUnionIntersetLL();
         TestSumPair();
-        TestSumFour();*/
-        TestSumSubarr();
+        TestSumFour();
+        TestSumSubarr();*/
+        TestConcat();
 
     }
     catch(const std::exception& e)

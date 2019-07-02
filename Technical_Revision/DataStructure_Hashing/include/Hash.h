@@ -66,6 +66,7 @@ namespace hash
             void sumFours(ElementType arr[], ElementType size_arr, ElementType sum);
             void printArr(ElementType arr[], int index, std::vector<ElementType> vec);
             void sumSubArr(ElementType arr[], int size_arr, ElementType sum);
+            void concat(ElementType arr1[], ElementType arr2[], int size_arr1, int size_arr2);
     };
 }
 
@@ -282,6 +283,34 @@ namespace hash
             }
             hashmap[sum_check].push_back(index);
         }
+    }
+
+    template <typename ElementType>
+    void FindElements<ElementType>::concat(ElementType arr1[], ElementType arr2[], int size_arr1, int size_arr2)
+    {
+        std::unordered_set<ElementType> map;
+        for (int i=0; i < size_arr2; i++)
+        {
+            if (map.find(arr2[i]) == map.end())
+            {
+                map.insert(arr2[i]);
+            }
+        }
+
+        for (int i=0; i < size_arr1; i++)
+        {
+            if (map.find(arr1[i]) == map.end())
+            {
+                map.insert(arr1[i]);
+            }
+        }
+
+        std::cout << "The value of two array" << "\n" << std::endl; 
+        for (auto itr = map.begin(); itr != map.end(); itr++)
+        {
+            std::cout << (*itr) << "-";
+        }
+        std::cout << "\n" << std::endl;
     }
 }
 

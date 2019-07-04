@@ -53,6 +53,7 @@ wines = pd.concat([red_wine, white_wine])
 wines = wines.sample(frac=1, random_state=42).reset_index(drop=True)
 wines = wines.dropna()
 wines.info()
+wines.to_csv('wines.csv', index=False)
 
 ######################################################################################
 ########################### Exploring target variable ################################
@@ -214,3 +215,65 @@ best_r2 = best_stat["r_squared"]
 print("The best overall model is '{formula}' with bic={bic:.2f} and R^2={r_squared:.3f}".format(
         formula=best_formula, bic=best_bic, r_squared=best_r2))
 models[best_k].summary()
+
+######################################################################################
+######################## Linear Regression with Sklearn ##############################
+######################################################################################
+
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+
+predictors = wines_cate.drop(columns='alcohol')
+target = wines_cate["alcohol"]
+X_train, X_test, y_train, y_test = train_test_split(predictors, target, test_size=0.2, random_state=42)
+
+regression = LinearRegression()
+regression.fit(X_train, y_train)
+
+predicted_y = regression.predict(X_test)
+r2 = regression.score(X_test, y_test)
+print(r2)
+
+print(regression.score(X_train, y_train))
+print(mean_squared_error(predicted_y, y_test))
+print(mean_squared_error(y_train, regression.predict(X_train)))
+print("Coefficients: \n", regression.coef_, regression.intercept_)
+
+fig, ax = plt.subplots(1,1, figsize=(15,10))
+ax.plot(y_test, predicted_y, 'o')
+grid = np.linspace(np.min(wines_cate["alcohol"]), np.max(wines_cate["alcohol"]), 100)
+ax.plot(grid, grid, color="black")
+ax.set_xlabel("actual_y")
+ax.set_ylabel("predicted y")
+
+######################################################################################
+######################## Linear Regression with PySpark ##############################
+######################################################################################
+
+from pyspark import SparkConf, SparkContext
+from pyspark.sql import SQLContext
+sc = SparkContext()
+sqlContext = SQLContext(sc)
+from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.regression import LinearRegression
+
+wines = sqlContext.read.format('com.databricks.spark.csv').options(header='true', 
+                              inferschema='true').load('wines.csv')
+wines.cache()
+wines.printSchema()
+
+vectorAssembler = VectorAssembler(inputCols = ['fixed acidity', 'volatile acidity', 'citric acid', 'residual sugar',
+                                               'chlorides'], outputCol = 'features')
+vwines_df = vectorAssembler.transform(wines)
+vwines_df = vwines_df.select(['features', 'alcohol'])
+vwines_df.show(3)
+
+splits = vwines_df.randomSplit([0.7, 0.3])
+train_df = splits[0]
+test_df = splits[1]
+
+lr = LinearRegression(featuresCol = "features", labelCol = "alcohol", maxIter=10, regParam=0.3, elasticNetParam=0.8)
+lr_model = lr.fit(train_df)
+print("Coefficients: " + str(lr_model.coefficients))
+print("Intercept: " + str(lr_model.intercept))

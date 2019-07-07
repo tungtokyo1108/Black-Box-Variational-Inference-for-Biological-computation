@@ -164,11 +164,11 @@ sampled_data.to_sql("Reviews", connection_sqlobject, schema=None, if_exists="rep
 ############################### KNN-algorithm #################################
 ###############################################################################
 
-def knn_algorithm(X_train, y_train, X_test, y_test, vectorizationType):
-    X_train = X_train
-    y_train = y_train
-    X_test = X_test
-    y_test = y_test
+def knn_cv_algorithm(X_cv_train, y_cv_train, X_cv_test, y_cv_test, vectorizationType):
+    X_train = X_cv_train
+    y_train = y_cv_train
+    X_test = X_cv_test
+    y_test = y_cv_test
     
     algorithms = ["brute"]
     for algo in algorithms:
@@ -204,13 +204,23 @@ def knn_algorithm(X_train, y_train, X_test, y_test, vectorizationType):
         plt.show()
         
         print("The error for each k value using {} algorithm: {}".format(algo.upper(), np.round(errors,3)))
-        
-        knn_classifier = KNeighborsClassifier(n_neighbors=optimal_k, weights="distance", algorithm="kd_tree",
-                                              p=2, metric="minkowski", n_jobs=6)
+    return optimal_k
+
+def knn_main_algorithm(X_main_train, y_main_train, X_main_test, y_main_test, optimal_k, algorithm, vectorizationType):
+        X_train = X_main_train
+        y_train = y_main_train
+        X_test = X_main_test
+        y_test = y_main_test
+        algo = algorithm
+    
+        knn_classifier = KNeighborsClassifier(n_neighbors=optimal_k, weights="distance", algorithm=algo,
+                                              p=2, metric="minkowski", n_jobs=-1)
         knn_classifier.fit(X_train, y_train)
         y_pred = knn_classifier.predict(X_test)
         
+        print("-"*100)
         print("The performance evaluation for {} mode".format(vectorizationType))
+        print("-"*100)
         
         test_accuracy = accuracy_score(y_test, y_pred, normalize=True) * 100
         points = accuracy_score(y_test, y_pred, normalize=False)
@@ -233,19 +243,37 @@ def knn_algorithm(X_train, y_train, X_test, y_test, vectorizationType):
         print(metrics.classification_report(y_test, y_pred))
         
         # The confusion matrix for the running model
+        print("-"*100)
         print("The confusion matrix for {} model using {} algorithm".format(
                 vectorizationType, algo.upper()))
         class_names = ["negative", "positive"]
         df_heatmap = pd.DataFrame(confusion_matrix(y_test, y_pred), index=class_names, columns=class_names)
-        fig = plt.figure(figsize=(10,7))
+        fig = plt.figure(figsize=(10,10))
         sns.heatmap(df_heatmap, annot=True, fmt="d")
         plt.ylabel("Predicted label", size=15)
         plt.xlabel("True label", size=15)
         plt.title("Confusion Matrix", size=20)
         plt.show()
+        print("-"*100)
+        # The ROC_Curve
+        print("The ROC_Curve for {} model using {} algorithm".format(
+                vectorizationType, algo.upper()))
+        y_pred_test = knn_classifier.predict_proba(X_test)[:,1]
+        print("AUC is {}, it means there is {}% chance that model will be able to distinguish between positive and negative class".format(
+                round(metrics.roc_auc_score(y_test, y_pred_test), 3), round(metrics.roc_auc_score(y_test, y_pred_test)* 100, 3)))
+        fpr, tpr, thresholds = metrics.roc_curve(y_test, y_pred_test)
+        fig, ax = plt.subplots(1,1,figsize=(10,10))
+        ax.plot([0,1],[0,1],"k--", lw=2, color="r", label="Chance")
+        ax.plot(fpr, tpr, label="Test ROC, auc = {}".format(round(metrics.roc_auc_score(y_test, y_pred_test), 3)))
+        plt.title("ROC_Curve", fontsize=20)
+        plt.xlabel("FPR", fontsize=15)
+        plt.ylabel("TPR", fontsize=15)
+        ax.legend()
+        plt.show()
+        print("-"*100)
         
         # Save information of model 
-        info_model_KNN = [vectorizationType, optimal_k, np.round(np.array(errors).mean(),4), 
+        info_model_KNN = [vectorizationType, 
                           np.round(1-metrics.accuracy_score(y_test, y_pred),4), 
                           np.round(metrics.f1_score(y_test, y_pred),4)]
         with open("info_model_KNN.txt", "a") as filehandle:
@@ -287,4 +315,5 @@ X_test_vectors = scalar.transform(X_test_vectors)
 
 del(sampled_dataset, X, y, X_train, X_test)
 
-knn_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, "Bag-of-Words")
+optimal_k = knn_cv_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, "Bag-of-Words")
+knn_main_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, optimal_k, "brute", "Bag-of-Words")

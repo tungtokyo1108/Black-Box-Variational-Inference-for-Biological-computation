@@ -6,6 +6,7 @@ Created on Thu Jul  4 15:19:34 2019
 Reference:
     - https://github.com/rsmahabir/Amazon-Fine-Food-Reviews-Analysis/blob/master/04.%20K-NN%20on%20Amazon%20Fine%20Food%20Reviews%20Dataset.ipynb
     - https://github.com/PushpendraSinghChauhan/Amazon-Fine-Food-Reviews/blob/master/Apply%20K-NN%20on%20Amazon%20reviews%20dataset%20.ipynb
+    - https://developers.google.com/machine-learning/crash-course/classification/precision-and-recall
 
 @author: tungutokyo
 """
@@ -317,3 +318,34 @@ del(sampled_dataset, X, y, X_train, X_test)
 
 optimal_k = knn_cv_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, "Bag-of-Words")
 knn_main_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, optimal_k, "brute", "Bag-of-Words")
+
+###############################################################################
+################### KNN-algorithm for TF-IDF model ############################
+###############################################################################
+
+connection_sqlobject = sqlite3.connect("sampled_dataset_all_reviews.sqlite")
+sampled_dataset = pd.read_sql_query(""" SELECT * FROM Reviews """, connection_sqlobject)
+
+X = sampled_dataset["CleanedText"]
+y = sampled_dataset["Class_Labels"]
+
+split = 30000
+X_train = X[0:split,]
+y_train = y[0:split,]
+X_test = X[split:40000,]
+y_test = y[split:40000,]
+
+tf_idf_object = TfidfVectorizer(ngram_range=(1,1)).fit(X_train)
+X_train_vectors = tf_idf_object.transform(X_train)
+X_test_vectors = tf_idf_object.transform(X_test)
+
+from sklearn.preprocessing import StandardScaler
+scalar = StandardScaler(with_mean=False)
+scalar.fit(X_train_vectors)
+X_train_vectors = scalar.transform(X_train_vectors)
+X_test_vectors = scalar.transform(X_test_vectors)
+
+del(sampled_dataset, X, y, X_train, X_test)
+
+optimal_k = knn_cv_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, "TF-IDF")
+knn_main_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, optimal_k, "brute", "TF-IDF")

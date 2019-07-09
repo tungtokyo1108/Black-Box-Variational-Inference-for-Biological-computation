@@ -349,3 +349,57 @@ del(sampled_dataset, X, y, X_train, X_test)
 
 optimal_k = knn_cv_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, "TF-IDF")
 knn_main_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, optimal_k, "brute", "TF-IDF")
+
+###############################################################################
+################ KNN-algorithm for Average Word2Vec ###########################
+###############################################################################
+
+connection_sqlobject = sqlite3.connect("sampled_dataset_all_reviews.sqlite")
+sampled_dataset = pd.read_sql_query(""" SELECT * FROM Reviews """, connection_sqlobject)
+
+X = sampled_dataset["PreserveStopwords"]
+y = sampled_dataset["Class_Labels"]
+split = 30000
+X_train = X[0:split,]
+y_train = y[0:split,]
+X_test = X[split:40000,]
+y_test = y[split:40000,]
+
+def vectorize(dataset):
+    word2vec_corpus = []
+    for sentence in dataset:
+        word2vec_corpus.append(sentence.split())
+        
+    print("The size of the Word2Vec text corpus: {}".format(len(word2vec_corpus)))
+    word2vec_model = Word2Vec(sentences=word2vec_corpus, size=200, min_count=5, workers=6)
+    word2vec_words = list(word2vec_model.wv.vocab)
+    print("The number of words that occured minimum 5 times: {}".format(len(word2vec_words)))
+        
+    sent_vectors = []
+    for sentence in word2vec_corpus:
+        sent_vec = np.zeros(200)
+        count_words = 0
+        for word in sentence:
+            if word in word2vec_words:
+                word_vectors = word2vec_model.wv[word]
+                sent_vec += word_vectors
+                count_words += 1
+        if count_words != 0:
+            sent_vec /= count_words
+        sent_vectors.append(sent_vec)
+    print("The length of the sentence vectors: {}".format(len(sent_vectors)))
+    sent_vectors = np.array(sent_vectors)
+    return sent_vectors
+    
+X_train_vectors = vectorize(X_train)
+X_test_vectors = vectorize(X_test)
+
+from sklearn.preprocessing import StandardScaler
+scalar = StandardScaler(with_mean=False)
+scalar.fit(X_train_vectors)
+X_train_vectors = scalar.transform(X_train_vectors)
+X_test_vectors = scalar.transform(X_test_vectors)
+del(sampled_dataset, X, y, X_train, X_test)
+
+optimal_k = knn_cv_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, "Average_Word2Vec")
+knn_main_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, optimal_k, "brute", "Average_Word2Vec") 

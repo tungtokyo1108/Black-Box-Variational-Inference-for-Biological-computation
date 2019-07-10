@@ -335,6 +335,8 @@ y_train = y[0:split,]
 X_test = X[split:40000,]
 y_test = y[split:40000,]
 
+# X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.3, random_state=0)
+
 tf_idf_object = TfidfVectorizer(ngram_range=(1,1)).fit(X_train)
 X_train_vectors = tf_idf_object.transform(X_train)
 X_test_vectors = tf_idf_object.transform(X_test)
@@ -364,6 +366,8 @@ X_train = X[0:split,]
 y_train = y[0:split,]
 X_test = X[split:40000,]
 y_test = y[split:40000,]
+
+# X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.3, random_state=0)
 
 def vectorize(dataset):
     word2vec_corpus = []

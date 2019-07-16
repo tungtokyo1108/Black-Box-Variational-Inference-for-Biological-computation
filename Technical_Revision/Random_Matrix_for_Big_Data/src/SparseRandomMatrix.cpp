@@ -5,7 +5,7 @@
  *  Data Scientist: Tung Dang
  */
 
-#include "SparseMatrix.h"
+#include "SparseRandomMatrix.h"
 
 namespace Eigen 
 {

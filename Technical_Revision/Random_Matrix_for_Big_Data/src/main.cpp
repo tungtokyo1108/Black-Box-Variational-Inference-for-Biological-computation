@@ -5,7 +5,8 @@
  *  Data Scientist: Tung Dang
  */
 
-#include "SparseMatrix.h"
+#include "SparseRandomMatrix.h"
+#include "SparseRandomMatrix.cpp"
 #include <time.h>
 
 void Test_Matrix_free_solver() {
@@ -79,12 +80,38 @@ void Test_SVD() {
     std::cout << "Time Computation: " << (double)(clock() - tStart)/CLOCKS_PER_SEC << std::endl;
 }
 
+template <typename ElementType, Eigen::internal::MatrixLayout layout>
+void TestMatrixNumRows()
+{
+    Eigen::internal::Matrix<ElementType, layout> M {
+        {1,0,4,0},
+        {0,0,0,0},
+        {0,0,0,7}
+    };
+
+    std::cout << M.NumRows();
+}
+
+template <typename ElementType, Eigen::internal::MatrixLayout layout>
+void RunLayoutMatrixTests()
+{
+    TestMatrixNumRows<ElementType, layout>();
+}
+
+template <typename ElementType>
+void RunMatrixTest()
+{
+    RunLayoutMatrixTests<ElementType, Eigen::internal::MatrixLayout::columnMajor>();
+    RunLayoutMatrixTests<ElementType, Eigen::internal::MatrixLayout::rowMajor>();
+}
+
 int main() {
     try
     {
         Test_Matrix_free_solver();
         Test_L2norm();
         Test_SVD();
+        // RunMatrixTest<int>();
     }
     catch(const std::exception& e)
     {

@@ -7,6 +7,8 @@
 
 #include "SparseRandomMatrix.h"
 #include "SparseRandomMatrix.cpp"
+#include "utils.h"
+// #include "utils.cpp"
 #include <time.h>
 
 void Test_Matrix_free_solver() {
@@ -80,6 +82,7 @@ void Test_SVD() {
     std::cout << "Time Computation: " << (double)(clock() - tStart)/CLOCKS_PER_SEC << std::endl;
 }
 
+////////////////////////////////////////////////////////////////////////////////////
 template <typename ElementType, Eigen::internal::MatrixLayout layout>
 void TestMatrixNumRows()
 {
@@ -104,13 +107,34 @@ void RunMatrixTest()
     RunLayoutMatrixTests<ElementType, Eigen::internal::MatrixLayout::columnMajor>();
     RunLayoutMatrixTests<ElementType, Eigen::internal::MatrixLayout::rowMajor>();
 }
+/////////////////////////////////////////////////////////////////////////////////////
+
+void TestsampleGauss()
+{
+    Eigen::MatrixXd m1(10,10);
+
+    RandSVD::Internal::Util<Eigen::MatrixXd> randmat;
+    randmat.sampleGaussianMat(m1);
+    std::cout << "Here is the Gaussian matrix with double type: \n" << m1 << std::endl;
+    // randmat.processGramSchmidt(m1);
+    randmat.modifiedGramSchmit(m1);
+    std::cout << "Here is the GramSchmidt process with double type: \n" << m1 << "\n" << std::endl;
+
+    Eigen::MatrixXf m2(10,10);
+    RandSVD::Internal::Util<Eigen::MatrixXf> randmat_f;
+    randmat_f.sampleGaussianMat(m2);
+    std::cout << "Here is the Gaussian matrix with float type: \n" << m2 << std::endl;
+    randmat_f.modifiedGramSchmit(m2);
+    std::cout << "Here is the GramSchmidt process with float type: \n" << m2 << std::endl;
+}
 
 int main() {
     try
     {
-        Test_Matrix_free_solver();
-        Test_L2norm();
-        Test_SVD();
+        // Test_Matrix_free_solver();
+        // Test_L2norm();
+        // Test_SVD();
+        TestsampleGauss();
         // RunMatrixTest<int>();
     }
     catch(const std::exception& e)

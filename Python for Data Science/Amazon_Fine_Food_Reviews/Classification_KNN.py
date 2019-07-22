@@ -165,6 +165,38 @@ sampled_data.to_sql("Reviews", connection_sqlobject, schema=None, if_exists="rep
 ############################### KNN-algorithm #################################
 ###############################################################################
 
+def knn_algorithm(X_cv_train, y_cv_train, X_cv_test, y_cv_test, vectorizationType):
+    X_train = X_cv_train
+    y_train = y_cv_train
+    X_test = X_cv_test
+    y_test = y_cv_test
+    
+    print("-"*100)
+    print("The KNN algorithm without Cross-Validation for {} model".format(vectorizationType))
+    print("-"*100)
+    
+    k_vals = [1, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60]
+    knns = {
+            k: KNeighborsClassifier(n_neighbors=k, weights="distance", algorithm="brute", 
+                                p=2, metric="minkowski", n_jobs=-1).fit(X_train, y_train)
+            for k in k_vals
+            }
+    validation_r2s = [
+            metrics.r2_score(y_test, model.predict(X_test))
+            for k, model in knns.items()]
+    
+    plt.figure(figsize=(10,8))
+    plt.plot(k_vals, validation_r2s, "-+", label="Validation")
+    plt.xlabel("n_neights", fontsize=15)
+    plt.ylabel("$R^2$", fontsize=15)
+    plt.legend()
+    
+    best_r2_idx = np.argmax(validation_r2s)
+    best_r2 = validation_r2s[best_r2_idx]
+    best_n_neighbors = k_vals[best_r2_idx]
+    print("Best n_neighbors is {}, which gives a validation R^2 of {}".format(
+            best_n_neighbors, round(best_r2), 3))
+    
 def knn_cv_algorithm(X_cv_train, y_cv_train, X_cv_test, y_cv_test, vectorizationType):
     X_train = X_cv_train
     y_train = y_cv_train
@@ -329,11 +361,11 @@ sampled_dataset = pd.read_sql_query(""" SELECT * FROM Reviews """, connection_sq
 X = sampled_dataset["CleanedText"]
 y = sampled_dataset["Class_Labels"]
 
-split = 30000
+split = 10000
 X_train = X[0:split,]
 y_train = y[0:split,]
-X_test = X[split:40000,]
-y_test = y[split:40000,]
+X_test = X[split:20000,]
+y_test = y[split:20000,]
 
 tf_idf_object = TfidfVectorizer(ngram_range=(1,1)).fit(X_train)
 X_train_vectors = tf_idf_object.transform(X_train)
@@ -359,11 +391,11 @@ sampled_dataset = pd.read_sql_query(""" SELECT * FROM Reviews """, connection_sq
 
 X = sampled_dataset["PreserveStopwords"]
 y = sampled_dataset["Class_Labels"]
-split = 30000
+split = 10000
 X_train = X[0:split,]
 y_train = y[0:split,]
-X_test = X[split:40000,]
-y_test = y[split:40000,]
+X_test = X[split:20000,]
+y_test = y[split:20000,]
 
 def vectorize(dataset):
     word2vec_corpus = []
@@ -400,6 +432,8 @@ scalar.fit(X_train_vectors)
 X_train_vectors = scalar.transform(X_train_vectors)
 X_test_vectors = scalar.transform(X_test_vectors)
 del(sampled_dataset, X, y, X_train, X_test)
+
+knn_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, "Average_Word2Vec")
 
 optimal_k = knn_cv_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, "Average_Word2Vec")
 knn_main_algorithm(X_train_vectors, y_train, X_test_vectors, y_test, optimal_k, "brute", "Average_Word2Vec") 

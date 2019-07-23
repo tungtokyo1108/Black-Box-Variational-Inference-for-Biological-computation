@@ -7,7 +7,6 @@ Reference:
     - https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/word2vec/word2vec_basic.py
     - https://towardsdatascience.com/learn-word2vec-by-implementing-it-in-tensorflow-45641adaf2ac
     - https://pytorch.org/tutorials/beginner/nlp/word_embeddings_tutorial.html
-    - https://srijithr.gitlab.io/post/word2vec/
 
 @author: tungutokyo
 """

@@ -1,3 +1,10 @@
+/**
+ *  Big Data Technology
+ *
+ *  Created on: July 27, 2019
+ *  Data Scientist: Tung Dang
+ */
+
 package jp.ac.utokyo.hashingproject.core.sequence.template;
 
 public interface Compound {

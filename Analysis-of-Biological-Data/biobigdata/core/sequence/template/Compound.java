@@ -5,7 +5,7 @@
  *  Data Scientist: Tung Dang
  */
 
-package jp.ac.utokyo.hashingproject.core.sequence.template;
+package jp.ac.utokyo.biobigdata.core.sequence.template;
 
 public interface Compound {
     public boolean equalsIgnoreCase(Compound compound);

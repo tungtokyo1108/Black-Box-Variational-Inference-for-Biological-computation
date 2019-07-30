@@ -21,9 +21,7 @@ import matplotlib as mpl
 mpl.rc('axes', labelsize = 14)
 mpl.rc('xtick', labelsize = 12)
 mpl.rc('ytick', labelsize = 12)
-
 import matplotlib.pyplot as plt
-
 plt.rcParams['font.size'] = 24
 
 from plotly import __version__

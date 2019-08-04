@@ -19,7 +19,6 @@ np.random.seed(42)
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd 
-
 mpl.rc('axes', labelsize = 14)
 mpl.rc('xtick', labelsize = 12)
 mpl.rc('ytick', labelsize = 12)

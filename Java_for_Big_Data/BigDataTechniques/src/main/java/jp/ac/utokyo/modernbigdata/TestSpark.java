@@ -79,6 +79,8 @@ public class TestSpark {
 
     public void BinaryClassificationMetrics() 
     {
+      System.out.println("Please enter the input filename");
+      String input = scanner.nextLine();
       System.out.println("Please enter the output filename");
       String outfile = scanner.nextLine();
       SparkConf conf = new SparkConf().setAppName("JavaCorrelationsExample").setMaster("local[*]").set("spark.executor.memory","1g");
@@ -86,8 +88,8 @@ public class TestSpark {
 
       try {
         Writer out = new BufferedWriter(new FileWriter(outfile));
-        String path = "data/mllib/sample_binary_classification_data.txt";
-        JavaRDD<LabeledPoint> data = MLUtils.loadLibSVMFile(sc, path).toJavaRDD();
+        // String path = "data/mllib/sample_binary_classification_data.txt";
+        JavaRDD<LabeledPoint> data = MLUtils.loadLibSVMFile(sc, input).toJavaRDD();
         
         // Split initial RDD into two parts
         JavaRDD<LabeledPoint>[] splits = data.randomSplit(new double[]{0.6, 0.4}, 11L);

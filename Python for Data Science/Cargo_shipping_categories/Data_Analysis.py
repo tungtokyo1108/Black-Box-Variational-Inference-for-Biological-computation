@@ -77,6 +77,7 @@ data_train["time"] = pd.to_datetime(data_train["listing_at"], errors="coerce")
 data_train["month"] = data_train["time"].dt.month
 data_train["weekofyear"] = data_train["time"].dt.weekofyear
 data_train["dayofweek"] = data_train["time"].dt.weekday
+data_train["hourofday"] = data_train["time"].dt.hour
 
 data_train["Month"] = data_train["month"].apply(lambda x: "Jan" 
                                                   if x == 1 else "Feb")
@@ -98,6 +99,20 @@ data_train["DayofWeek"] = data_train["dayofweek"].apply(lambda x: "Mon"
 data_train["DayofWeek"] = pd.Categorical(data_train["DayofWeek"],
                               categories=["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
 
+data_train["HourofDay"] = data_train["hourofday"].apply(lambda x: "0-5AM"
+                                                          if x <= 5 else "6-12AM"
+                                                          if x <= 12 else "1-5PM"
+                                                          if x <= 17 else "6-12PM")
+data_train["HourofDay"] = pd.Categorical(data_train["HourofDay"],
+                              categories=["0-5AM", "6-12AM", "1-5PM", "6-12PM"])
+
+data_train["TypeofPrice"] = data_train["price"].apply(lambda x: "Cheap"
+                                                          if x <= 948 else "Middle"
+                                                          if x <= 1193.75 else "Expensive")
+data_train["TypeofPrice"] = pd.Categorical(data_train["TypeofPrice"], 
+                              categories=["Cheap", "Middle", "Expensive"])
+
+
 data_train["Size"] = data_train["size"].apply(lambda x: "Small"
                                                   if x <= 4 else "Middle"
                                                   if x <= 12 else "Large")
@@ -105,7 +120,8 @@ data_train["Size"] = pd.Categorical(data_train["Size"],
                           categories=["Small", "Middle", "Large"])
 
 data_train_final = data_train.drop(columns = ["category_class", "sold_price", "size", "listing_at",
-                                              "time", "month", "weekofyear", "dayofweek", "DayOfWeek"])
+                                              "time", "month", "weekofyear", "dayofweek", "DayOfWeek", 
+                                              "hourofday"])
 
 ###############################################################################
 ######################### Target variable Analysis ############################
@@ -151,10 +167,20 @@ data_cat_cond = data_train.groupby(["category_class"])["condition"].value_counts
 ################# Feature Engineering and Selection ###########################
 ###############################################################################
 
-numeric_subset = data_train_final["price"]
+"""
+Subset data without time varibles
+"""
+numeric_pre_subset = data_train[["price", "size"]]
+categorial_pre_subset = data_train_final[["category_label", "condition", "area_name"]]
+categorial_pre_subset = pd.get_dummies(categorial_pre_subset)
+features_pre = pd.concat([categorial_pre_subset, numeric_pre_subset], axis=1)
 
+"""
+Subset data with time variables
+"""
+numeric_subset = data_train_final["price"]
 categorial_subset = data_train_final[["category_label", "condition", "area_name", "Size",
-                                      "Month", "WeekofYear", "DayofWeek"]]
+                                      "Month", "WeekofYear", "DayofWeek", "HourofDay"]]
 categorial_subset = pd.get_dummies(categorial_subset)
 features = pd.concat([categorial_subset, numeric_subset], axis=1)
 
@@ -202,6 +228,7 @@ def pca_vis(data, labels):
     plt.ylabel("4th_principal_component ({}%)".format(round(pca.explained_variance_ratio_[3]*100),2), fontsize=15)
     plt.show()
     print("Time taken to perform Principal Component Analysis: {}".format(dt.now()-st))
+    return pca_df
     
 def pca_redu(data):
     pca = decomposition.PCA()
@@ -215,14 +242,25 @@ def pca_redu(data):
     plt.ylabel("Cumulative explained variance", fontsize=15)
     plt.legend()
 
+"""
+With time variable 
+"""
 X = features.drop(columns = ["category_label_Cat_0", "category_label_Cat_1", "category_label_Cat_2",
                              "category_label_Cat_3", "category_label_Cat_4"])
 y = data_train_final["category_label"]
 
 X = standardize(X)
 pca_redu(X)
-pca_vis(X,y)
+pca_result = pca_vis(X,y)
 
+"""
+Without time variables 
+"""
+X_pre = features_pre.drop(columns = ["category_label_Cat_0", "category_label_Cat_1", "category_label_Cat_2",
+                             "category_label_Cat_3", "category_label_Cat_4"])
+y = data_train_final["category_label"]
+X_pre = standardize(X_pre)
+pca_pre_result = pca_vis(X_pre,y)
 
 ###############################################################################
 ##################### Model training and evaluation ###########################
@@ -244,7 +282,7 @@ from sklearn.model_selection import cross_validate
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.model_selection import TimeSeriesSplit, GridSearchCV, RandomizedSearchCV
 
-def get_RandSearchCV_RF(X_train, y_train, X_test, y_test, scoring):
+def get_RandSearchCV(X_train, y_train, X_test, y_test, scoring, type_search):
     from sklearn.model_selection import TimeSeriesSplit
     from datetime import datetime as dt 
     st_t = dt.now()
@@ -270,17 +308,28 @@ def get_RandSearchCV_RF(X_train, y_train, X_test, y_test, scoring):
                       'max_features': max_features}
     
     cv_timeSeries = TimeSeriesSplit(n_splits=5).split(X_train)
-    base_model = RandomForestClassifier(criterion="gini", random_state=42)
+    base_model_rf = RandomForestClassifier(criterion="gini", random_state=42)
+    base_model_gb = GradientBoostingClassifier(criterion="friedman_mse", random_state=42)
     
     # Run randomzed search 
     n_iter_search = 30
-    rsearch_cv = RandomizedSearchCV(estimator=base_model, 
+    if type_search == "RandomSearchCV-RandomForest":
+        rsearch_cv = RandomizedSearchCV(estimator=base_model_rf, 
                                    random_state=42,
                                    param_distributions=hyperparameter,
                                    n_iter=n_iter_search,
                                    cv=cv_timeSeries,
                                    scoring=scoring,
                                    n_jobs=-1)
+    else:
+        rsearch_cv = RandomizedSearchCV(estimator=base_model_gb, 
+                                   random_state=42,
+                                   param_distributions=hyperparameter,
+                                   n_iter=n_iter_search,
+                                   cv=cv_timeSeries,
+                                   scoring=scoring,
+                                   n_jobs=-1)
+    
     rsearch_cv.fit(X_train, y_train)
     print("Best estimator obtained from CV data: \n", rsearch_cv.best_estimator_)
     print("Best Score: ", rsearch_cv.best_score_)
@@ -292,6 +341,7 @@ def performance_rand(best_clf, X_train, y_train, X_test, y_test, type_search):
     print("Detailed report for the {} algorithm".format(type_search))
     
     y_pred = best_clf.predict(X_test)
+    y_pred_prob = best_clf.predict_proba(X_test)[:,1]
     
     test_accuracy = accuracy_score(y_test, y_pred, normalize=True) * 100
     points = accuracy_score(y_test, y_pred, normalize=False)
@@ -310,8 +360,11 @@ def performance_rand(best_clf, X_train, y_train, X_test, y_test, type_search):
     print("\nClassification report for {} model: \n".format(type_search))
     print(metrics.classification_report(y_test, y_pred))
     
-    plt.figure(figsize=(10,10))
+    plt.figure(figsize=(12,12))
     cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
+    cnf_matrix_norm = cnf_matrix.astype('float') / cnf_matrix.sum(axis=1)[:, np.newaxis]
+    print("\nThe Confusion Matrix: \n")
+    print(cnf_matrix)
     """
     cmap = plt.cm.Blues
     plt.imshow(cnf_matrix, interpolation="nearest", cmap=cmap)
@@ -323,27 +376,22 @@ def performance_rand(best_clf, X_train, y_train, X_test, y_test, type_search):
                  color="white" if cnf_matrix[i,j] > thresh else "black")
     """
     cmap = plt.cm.Blues
-    sns.heatmap(cnf_matrix, annot=True, cmap=cmap, fmt="d", annot_kws={"size":12}, linewidths=.05)
-    plt.title("The confusion matrix", fontsize=20)
+    sns.heatmap(cnf_matrix_norm, annot=True, cmap=cmap, fmt=".2f", annot_kws={"size":15}, linewidths=.05)
+    if type_search == "RandomSearchCV-RandomForest":
+        plt.title("The Normalized Confusion Matrix - {}".format("RandomForest"), fontsize=20)
+    else:
+        plt.title("The Normalized Confusion Matrix - {}".format("GradientBoosting"), fontsize=20)
+    
     plt.ylabel("True label", fontsize=15)
     plt.xlabel("Predicted label", fontsize=15)
     plt.show()
     
-    """
-    y_pred_prob = best_clf.predict_proba(X_test)[:,1]
-    n_classes = 5
-    fpr = dict()
-    tpr = dict()
-    roc_auc = dict()
-    for i in range(n_classes):
-        fpr[i], tpr[i], _ = metrics.roc_curve(y_test.values[i], y_pred_prob[i])
-        roc_auc[i] = metrics.auc(fpr[i], tpr[i])
-    """
-    
     importances = best_clf.feature_importances_
     indices = np.argsort(importances)[::-1]
     return {"importance": importances, 
-            "index": indices}
+            "index": indices,
+            "y_pred": y_pred,
+            "y_pred_prob": y_pred_prob}
     
     
 def RF_classifier(X_train, y_train, X_test, y_test, scoring, type_search):
@@ -351,14 +399,14 @@ def RF_classifier(X_train, y_train, X_test, y_test, scoring, type_search):
     print("Starting {} steps with {} for evaluation rules...".format(type_search, scoring))
     print("*"*100)
     
-    rsearch_cv = get_RandSearchCV_RF(X_train, y_train, X_test, y_test, scoring)
+    rsearch_cv = get_RandSearchCV(X_train, y_train, X_test, y_test, scoring, type_search)
     
     best_estimator = rsearch_cv.best_estimator_
     max_depth = rsearch_cv.best_estimator_.max_depth
     n_estimators = rsearch_cv.best_estimator_.n_estimators
     var_imp_rf = performance_rand(best_estimator, X_train, y_train, X_test, y_test, type_search)
     
-    print("~~~~~~~~~~~~~ Features ranking and ploting ~~~~~~~~~~~~~~~~~~~~~\n")
+    print("\n~~~~~~~~~~~~~ Features ranking and ploting ~~~~~~~~~~~~~~~~~~~~~\n")
     
     importances_rf = var_imp_rf["importance"]
     indices_rf = var_imp_rf["index"]
@@ -376,7 +424,7 @@ def RF_classifier(X_train, y_train, X_test, y_test, scoring, type_search):
     
     fig, ax = plt.subplots(figsize=(15,15))
     ax = plt.gca()
-    plt.title("Feature importances for Random Forest Model", fontsize=20)
+    plt.title("Feature importances for {} Model".format(type_search), fontsize=20)
     plt.barh(index, importance_desc, align="center", color="blue", alpha=0.6)
     plt.grid(axis="x", color="white", linestyle="-")
     plt.yticks(index, feature_space)
@@ -384,20 +432,28 @@ def RF_classifier(X_train, y_train, X_test, y_test, scoring, type_search):
     plt.ylabel("Features", fontsize=15)
     ax.tick_params(axis="both", which="both", length=0)
     plt.show()
+    
+    return var_imp_rf
 
 """
 Random Forest for all data_train_final
 """
 X = features.drop(columns = ["category_label_Cat_0", "category_label_Cat_1", "category_label_Cat_2",
                              "category_label_Cat_3", "category_label_Cat_4"])
-X["Log_price"] = np.log(features["price"])
+# X["pca_1"] = pca_result["1st_principal_component"]
+# X["pca_2"] = pca_result["2nd_principal_component"]
+# X["pca_3"] = pca_result["3rd_principal_component"]
+# X["pca_4"] = pca_result["4th_principal_component"]
+X["pca_1"] = pca_pre_result["1st_principal_component"]
+X["pca_2"] = pca_pre_result["2nd_principal_component"]
+X["pca_3"] = pca_pre_result["3rd_principal_component"]
+X["pca_4"] = pca_pre_result["4th_principal_component"]
 y = data_train["category_class"]
-y_binary = label_binarize(y, classes=[0,1,2,3,4])
-n_classes = y_binary.shape[1]
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42) 
 
-RF_classifier(X_train, y_train, X_test, y_test, "accuracy", "RandomSearchCV-RF")
+result = RF_classifier(X_train, y_train, X_test, y_test, "f1_macro", "RandomSearchCV-RandomForest")
+result = RF_classifier(X_train, y_train, X_test, y_test, "f1_macro", "RandomSearchCV-GradientBoosting")
 
 """
 Random Forest for second training 
@@ -408,52 +464,29 @@ X_2 = features.drop(columns = ["category_label_Cat_0", "category_label_Cat_1", "
                              "WeekofYear_5th_week", "DayofWeek_Fri", "DayofWeek_Mon", 
                              "DayofWeek_Sat", "DayofWeek_Sun", "DayofWeek_Thu", "DayofWeek_Tue",
                              "DayofWeek_Wed"])
+X_2["pca_1"] = pca_pre_result["1st_principal_component"]
+X_2["pca_2"] = pca_pre_result["2nd_principal_component"]
+X_2["pca_3"] = pca_pre_result["3rd_principal_component"]
+X_2["pca_4"] = pca_pre_result["4th_principal_component"]
 y = data_train["category_class"]
 X_train_2, X_test_2, y_train, y_test = train_test_split(X_2, y, test_size=0.3, random_state=42)
-RF_classifier(X_train_2, y_train, X_test_2, y_test, "accuracy", "RandomSearchCV-RF")
+result = RF_classifier(X_train_2, y_train, X_test_2, y_test, "f1_macro", "RandomSearchCV-RandomForest")
+result = RF_classifier(X_train_2, y_train, X_test_2, y_test, "f1_macro", "RandomSearchCV-GradientBoosting")
 
+"""
+Random Forest for third training
+"""
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+X_3 = features.drop(columns = ["category_label_Cat_0", "category_label_Cat_1", "category_label_Cat_2",
+                             "category_label_Cat_3", "category_label_Cat_4", "area_name_ccc", 
+                             "area_name_ddd", "area_name_aaa", "area_name_bbb", "area_name_hhh",
+                             "area_name_kkk", "area_name_jjj", "area_name_fff", "area_name_ggg",
+                             "area_name_eee"])
+X_3["pca_1"] = pca_pre_result["1st_principal_component"]
+X_3["pca_2"] = pca_pre_result["2nd_principal_component"]
+X_3["pca_3"] = pca_pre_result["3rd_principal_component"]
+X_3["pca_4"] = pca_pre_result["4th_principal_component"]
+y = data_train["category_class"]
+X_train_3, X_test_3, y_train, y_test = train_test_split(X_3, y, test_size=0.3, random_state=42)
+result = RF_classifier(X_train_3, y_train, X_test_3, y_test, "f1_macro", "RandomSearchCV-RandomForest")
+result = RF_classifier(X_train_3, y_train, X_test_3, y_test, "f1_macro", "RandomSearchCV-GradientBoosting")

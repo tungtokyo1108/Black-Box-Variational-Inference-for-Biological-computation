@@ -113,14 +113,14 @@ data_train["TypeofPrice"] = pd.Categorical(data_train["TypeofPrice"],
                               categories=["Cheap", "Middle", "Expensive"])
 
 
-data_train["Size"] = data_train["size"].apply(lambda x: "Small"
+data_train["TypeofSize"] = data_train["size"].apply(lambda x: "Small"
                                                   if x <= 4 else "Middle"
                                                   if x <= 12 else "Large")
-data_train["Size"] = pd.Categorical(data_train["Size"], 
+data_train["TypeofSize"] = pd.Categorical(data_train["TypeofSize"], 
                           categories=["Small", "Middle", "Large"])
 
-data_train_final = data_train.drop(columns = ["category_class", "sold_price", "size", "listing_at",
-                                              "time", "month", "weekofyear", "dayofweek", "DayOfWeek", 
+data_train_final = data_train.drop(columns = ["category_class", "sold_price", "listing_at",
+                                              "time", "month", "weekofyear", "dayofweek", 
                                               "hourofday"])
 
 ###############################################################################
@@ -179,7 +179,7 @@ features_pre = pd.concat([categorial_pre_subset, numeric_pre_subset], axis=1)
 Subset data with time variables
 """
 numeric_subset = data_train_final["price"]
-categorial_subset = data_train_final[["category_label", "condition", "area_name", "Size",
+categorial_subset = data_train_final[["category_label", "condition", "area_name", "TypeofSize",
                                       "Month", "WeekofYear", "DayofWeek", "HourofDay"]]
 categorial_subset = pd.get_dummies(categorial_subset)
 features = pd.concat([categorial_subset, numeric_subset], axis=1)
@@ -341,7 +341,7 @@ def performance_rand(best_clf, X_train, y_train, X_test, y_test, type_search):
     print("Detailed report for the {} algorithm".format(type_search))
     
     y_pred = best_clf.predict(X_test)
-    y_pred_prob = best_clf.predict_proba(X_test)[:,1]
+    y_pred_prob = best_clf.predict_proba(X_test)
     
     test_accuracy = accuracy_score(y_test, y_pred, normalize=True) * 100
     points = accuracy_score(y_test, y_pred, normalize=False)
@@ -392,8 +392,7 @@ def performance_rand(best_clf, X_train, y_train, X_test, y_test, type_search):
             "index": indices,
             "y_pred": y_pred,
             "y_pred_prob": y_pred_prob}
-    
-    
+
 def RF_classifier(X_train, y_train, X_test, y_test, scoring, type_search):
     print("*"*100)
     print("Starting {} steps with {} for evaluation rules...".format(type_search, scoring))
@@ -410,11 +409,12 @@ def RF_classifier(X_train, y_train, X_test, y_test, scoring, type_search):
     
     importances_rf = var_imp_rf["importance"]
     indices_rf = var_imp_rf["index"]
-    
-    for f in range(0, indices_rf.shape[0]):
-        i = f
-        print("{0}. The features '{1}' contribute {2:.5f} to decreasing the weighted impurity".format(
-                f+1, X_train.columns[indices_rf[i]], importances_rf[indices_rf[f]]))
+    y_pred = var_imp_rf["y_pred"]
+        
+    feature_tab = pd.DataFrame({"Features" : list(X_train.columns),
+                                "Importance": importances_rf})
+    feature_tab = feature_tab.sort_values("Importance", ascending = False).reset_index(drop=True)
+    print(feature_tab)
     
     index = np.arange(len(X_train.columns))
     importance_desc = sorted(importances_rf)
@@ -490,3 +490,58 @@ y = data_train["category_class"]
 X_train_3, X_test_3, y_train, y_test = train_test_split(X_3, y, test_size=0.3, random_state=42)
 result = RF_classifier(X_train_3, y_train, X_test_3, y_test, "f1_macro", "RandomSearchCV-RandomForest")
 result = RF_classifier(X_train_3, y_train, X_test_3, y_test, "f1_macro", "RandomSearchCV-GradientBoosting")
+
+
+###############################################################################
+######################### Explain model training ##############################
+###############################################################################
+
+import lime
+import lime.lime_tabular
+
+clf = []
+for clas in range(5):
+    clf.append(RandomForestClassifier(bootstrap=True, class_weight=None, criterion='gini',
+            max_depth=25, max_features='auto', max_leaf_nodes=None,
+            min_impurity_decrease=0.0, min_impurity_split=None,
+            min_samples_leaf=1, min_samples_split=4,
+            min_weight_fraction_leaf=0.0, n_estimators=250, n_jobs=None,
+            oob_score=False, random_state=42, verbose=0, warm_start=False).fit(X_train, y_train == clas))
+
+explainer = lime.lime_tabular.LimeTabularExplainer(X_train.values, feature_names = X_train.columns,
+                                                   random_state=42)
+
+def explain_row (clf, row, num_reasons = 15):
+    exp = [
+            exp_pair[0] for exp_pair in explainer.explain_instance(
+                    row, clf.predict_proba, labels = [1], num_features = num_reasons).as_list() if exp_pair[1] > 0
+            ][:num_reasons]
+    exp += [""] * (num_reasons - len(exp))
+    return exp
+
+def predict_explain(rf, X, score_cat, num_reasons = 15):
+    pred_ex = X[[]]
+    pred_ex[score_cat] = rf.predict_proba(X)[:,1]
+    cols = zip(
+            *X.apply(
+                    lambda x: explain_row(rf, x, num_reasons), axis = 1, raw = True))
+    for n in range(num_reasons):
+        pred_ex["REASON %d" %(n+1)] = next(cols)
+    
+    return pred_ex
+
+y_pred = result["y_pred"]
+explain_cat0 = predict_explain(clf[0], X_test).assign(PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
+                    "SCORE", ascending = False)
+
+explain_cat1 = predict_explain(clf[1], X_test).assign(PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
+                    "SCORE", ascending = False)
+
+explain_cat2 = predict_explain(clf[2], X_test).assign(PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
+                    "SCORE", ascending = False)
+
+explain_cat3 = predict_explain(clf[3], X_test).assign(PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
+                    "SCORE", ascending = False)
+
+explain_cat4 = predict_explain(clf[4], X_test).assign(PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
+                    "SCORE", ascending = False)

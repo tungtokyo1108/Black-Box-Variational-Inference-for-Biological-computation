@@ -8,6 +8,9 @@ import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics;
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.mllib.util.MLUtils;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.mllib.tree.RandomForest;
+import org.apache.spark.mllib.tree.model.RandomForestModel;
+
 // $example on$
 import java.util.Arrays;
 import java.io.BufferedWriter;
@@ -16,6 +19,8 @@ import java.util.Scanner;
 import java.io.Writer;
 import java.io.IOException;
 import scala.Tuple2;
+import java.util.Map;
+import java.util.HashMap;
 
 import org.apache.spark.api.java.JavaDoubleRDD;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -147,9 +152,86 @@ public class TestSpark {
       sc.stop();
     }
 
+    public void RandomForestExample() {
+      System.out.println("Please enter the input filename");
+      String input = scanner.nextLine();
+      System.out.println("Please enter the output filename");
+      String output = scanner.nextLine();
+      SparkConf conf = new SparkConf().setAppName("AppRandomForest").setMaster("local[*]").set("spark.executor.memory", "1g");
+      SparkContext sc = new SparkContext(conf);
+
+      try {
+        Writer out = new BufferedWriter(new FileWriter(output));
+        JavaRDD<LabeledPoint> data = MLUtils.loadLibSVMFile(sc, input).toJavaRDD();
+        JavaRDD<LabeledPoint>[] splits = data.randomSplit(new double[]{0.7, 0.3});
+        JavaRDD<LabeledPoint> trainingData = splits[0];
+        JavaRDD<LabeledPoint> testData = splits[1];
+        
+        int numClasses = 2;
+        Map<Integer, Integer> categoricalFeaturesInfo = new HashMap<>();
+        int numTrees = 10;
+        String featureSubsetStrategy = "auto";
+        String impurity = "gini";
+        int maxDepth = 10;
+        int maxBins = 100;
+        int seed = 12345;
+
+        RandomForestModel model = RandomForest.trainClassifier(trainingData, numClasses, 
+          categoricalFeaturesInfo, numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins, seed);
+        
+        JavaPairRDD<Object, Object> predictionAndLabel = 
+          testData.mapToPair(p -> new Tuple2<>(model.predict(p.features()), p.label()));
+        
+        double testErr = predictionAndLabel.filter(pl -> !pl._1().equals(pl._2())).count() / (double) testData.count();
+        
+        // Get evaluation metrics
+        BinaryClassificationMetrics metrics_rf = new BinaryClassificationMetrics(predictionAndLabel.rdd());
+
+        // Get presion by threshold
+        JavaRDD<Tuple2<Object, Object>> presions = metrics_rf.precisionByThreshold().toJavaRDD(); 
+
+        // Get Recall by threshold
+        JavaRDD<?> recall = metrics_rf.recallByThreshold().toJavaRDD();
+
+        // Get F score by threshold
+        JavaRDD<?> f1score = metrics_rf.fMeasureByThreshold().toJavaRDD();
+        JavaRDD<?> f2score = metrics_rf.fMeasureByThreshold(2.0).toJavaRDD();
+
+        // Get Presion-recall curve
+        JavaRDD<?> prc = metrics_rf.pr().toJavaRDD();
+
+        // Get Threshold
+        JavaRDD<Double> threshold = presions.map(t -> Double.parseDouble(t._1().toString()));
+
+        // Get ROC curve
+        JavaRDD<?> roc = metrics_rf.roc().toJavaRDD();
+
+        out.write("The general information of model: \n" + model.toString() + "\n\n");
+        out.write("Test Error: \n" + testErr + "\n\n");
+        out.write("Presion by threshold: \n" + presions.collect() + "\n\n");
+        out.write("Recall by threshold: \n" + recall.collect() + "\n\n");
+        out.write("F1 Score by threshold: \n" + f1score.collect() + "\n\n");
+        out.write("F2 Score by threshold: \n" + f2score.collect() + "\n\n");
+        out.write("Presion-recall curve: \n" + prc.collect() + "\n\n");
+        out.write("ROC curve: \n" + roc.collect() + "\n\n");
+        out.write("Area under presion-recall curve: \n" + metrics_rf.areaUnderPR() + "\n\n");
+        out.write("Area under ROC: \n" + metrics_rf.areaUnderROC() + "\n\n");
+        out.write("Learned classification forest model: \n" + model.toDebugString() + "\n\n");
+        out.close();
+
+        model.save(sc, "target/tmp/RandomForestModel");
+        RandomForestModel.load(sc, "target/tmp/RandomForestModel");
+      } catch (IOException ex) {
+        System.out.println("Error reading file");
+      }
+
+      sc.stop();
+    }
+
     public static void main(String[] args) {
       TestSpark test = new TestSpark();
       // test.SparkCorr();   
-      test.BinaryClassificationMetrics();
+      // test.BinaryClassificationMetrics();
+      test.RandomForestExample();
     }
 }

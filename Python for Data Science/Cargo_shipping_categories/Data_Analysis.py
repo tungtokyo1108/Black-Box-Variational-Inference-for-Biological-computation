@@ -204,17 +204,18 @@ def standardize(data):
 
 def pca_vis(data, labels):
     st = dt.now()
-    pca = decomposition.PCA(n_components=4)
+    pca = decomposition.PCA(n_components=6)
     pca_reduced = pca.fit_transform(data)
     
     print("The shape of transformed data", pca_reduced.shape)
-    print(pca_reduced[0:4])
+    print(pca_reduced[0:6])
     
     pca_data = np.vstack((pca_reduced.T, labels)).T
     print("The shape of data with labels", pca_data.shape)
     
     pca_df = pd.DataFrame(data=pca_data, columns=("1st_principal_component", "2nd_principal_component",
-                                                  "3rd_principal_component", "4th_principal_component", "labels"))
+                                                  "3rd_principal_component", "4th_principal_component", 
+                                                  "5th_principal_component", "6th_principal_component", "labels"))
     print(pca_df.head())
     
     sns.FacetGrid(pca_df, hue="labels", height=8).map(sns.scatterplot, 
@@ -230,8 +231,8 @@ def pca_vis(data, labels):
     print("Time taken to perform Principal Component Analysis: {}".format(dt.now()-st))
     return pca_df
     
-def pca_redu(data):
-    pca = decomposition.PCA()
+def pca_redu(data, num_components):
+    pca = decomposition.PCA(n_components=num_components)
     pca_data = pca.fit_transform(data)
     plt.figure(figsize=(15,10))
     plt.plot(np.cumsum(pca.explained_variance_ratio_))
@@ -241,6 +242,7 @@ def pca_redu(data):
     plt.xlabel("Number of components", fontsize=15)
     plt.ylabel("Cumulative explained variance", fontsize=15)
     plt.legend()
+    return pca_data
 
 """
 With time variable 
@@ -250,7 +252,7 @@ X = features.drop(columns = ["category_label_Cat_0", "category_label_Cat_1", "ca
 y = data_train_final["category_label"]
 
 X = standardize(X)
-pca_redu(X)
+pca_full_result = pd.DataFrame(pca_redu(X,32))
 pca_result = pca_vis(X,y)
 
 """
@@ -260,13 +262,37 @@ X_pre = features_pre.drop(columns = ["category_label_Cat_0", "category_label_Cat
                              "category_label_Cat_3", "category_label_Cat_4"])
 y = data_train_final["category_label"]
 X_pre = standardize(X_pre)
+pca_pre_full = pd.DataFrame(pca_redu(X_pre,6))
 pca_pre_result = pca_vis(X_pre,y)
+
+
+from MulticoreTSNE import MulticoreTSNE as TSNE
+from sklearn.preprocessing import StandardScaler
+
+def tsne(dataset, labels, perplexity):
+    model = TSNE(n_components=2, random_state=0, n_jobs=8, perplexity=perplexity, n_iter=5000)
+    tsne_data = model.fit_transform(dataset)
+    tsne_data = np.vstack((tsne_data.T, labels)).T
+    tsne_df = pd.DataFrame(data=tsne_data, columns=("Dimension 1", "Dimension 2", "labels"))
+    print("T-SNE plot for perplexity = {}".format(perplexity))
+    return tsne_df
+
+def tsne_plot(dataset, labels, perplexity):
+    sns.FacetGrid(dataset, hue="labels", size=8).map(
+            sns.scatterplot, "Dimension 1", "Dimension 2", edgecolor="w").add_legend()
+    plt.title("T-SNE with perplexity = {} and n_iter = 5000".format(perplexity), fontsize=15)
+    plt.show()
+    
+tsne_df = tsne(X_pre, y, 50)
+tsne_plot(tsne_df, y, 50)
 
 ###############################################################################
 ##################### Model training and evaluation ###########################
 ###############################################################################
 
 import itertools
+from scipy import interp
+from itertools import cycle
 from sklearn.preprocessing import label_binarize
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
@@ -386,6 +412,44 @@ def performance_rand(best_clf, X_train, y_train, X_test, y_test, type_search):
     plt.xlabel("Predicted label", fontsize=15)
     plt.show()
     
+    print("\nROC curve and AUC")
+    y_pred = best_clf.predict(X_test)
+    y_pred_prob = best_clf.predict_proba(X_test)
+    y_test_cat = np.array(pd.get_dummies(y_test))
+
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+
+    for i in range(5):
+        fpr[i], tpr[i], _ = metrics.roc_curve(y_test_cat[:,i], y_pred_prob[:,i])
+        roc_auc[i] = metrics.auc(fpr[i], tpr[i])
+
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(5)]))
+    mean_tpr = np.zeros_like(all_fpr)
+    for i in range(5):
+        mean_tpr += interp(all_fpr, fpr[i], tpr[i])
+        
+    mean_tpr /= 5
+    fpr["macro"] = all_fpr
+    tpr["macro"] = mean_tpr
+    roc_auc["macro"] = metrics.auc(fpr["macro"], tpr["macro"])
+
+    plt.figure(figsize=(12,12))
+    plt.plot(fpr["macro"], tpr["macro"], 
+         label = "macro-average ROC curve (area = {0:0.2f})".format(roc_auc["macro"]),
+         color = "navy", linestyle=":", linewidth=4)
+    colors = cycle(["red", "orange", "blue", "pink", "green"])
+    for i, color in zip(range(5), colors):
+        plt.plot(fpr[i], tpr[i], color=color, lw=2,
+                 label = "ROC curve of class {0} (AUC = {1:0.2f})".format(i, roc_auc[i]))   
+    plt.plot([0,1], [0,1], "k--", lw=2)
+    plt.title("ROC-AUC for {}".format(type_search), fontsize=20)
+    plt.xlabel("False Positive Rate", fontsize=15)
+    plt.ylabel("True Positive Rate", fontsize=15)
+    plt.legend(loc="lower right")
+    plt.show()
+    
     importances = best_clf.feature_importances_
     indices = np.argsort(importances)[::-1]
     return {"importance": importances, 
@@ -444,10 +508,17 @@ X = features.drop(columns = ["category_label_Cat_0", "category_label_Cat_1", "ca
 # X["pca_2"] = pca_result["2nd_principal_component"]
 # X["pca_3"] = pca_result["3rd_principal_component"]
 # X["pca_4"] = pca_result["4th_principal_component"]
+# X = pd.concat([X, pca_full_result], axis=1)
 X["pca_1"] = pca_pre_result["1st_principal_component"]
 X["pca_2"] = pca_pre_result["2nd_principal_component"]
 X["pca_3"] = pca_pre_result["3rd_principal_component"]
 X["pca_4"] = pca_pre_result["4th_principal_component"]
+X["pca_5"] = pca_pre_result["5th_principal_component"]
+X["pca_6"] = pca_pre_result["6th_principal_component"]
+# X = pd.concat([X, pca_pre_full], axis=1)
+# X["Log_price"] = np.log(X["price"])
+# X["X^2"] = X["price"]^2
+# X["X^3"] = X["price"]^3
 y = data_train["category_class"]
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42) 
@@ -491,6 +562,29 @@ X_train_3, X_test_3, y_train, y_test = train_test_split(X_3, y, test_size=0.3, r
 result = RF_classifier(X_train_3, y_train, X_test_3, y_test, "f1_macro", "RandomSearchCV-RandomForest")
 result = RF_classifier(X_train_3, y_train, X_test_3, y_test, "f1_macro", "RandomSearchCV-GradientBoosting")
 
+###############################################################################
+######################### Visualize decision tree #############################
+###############################################################################
+
+from sklearn.tree import export_graphviz
+from subprocess import call
+from IPython.display import Image
+
+final_model = RandomForestClassifier(bootstrap=True, class_weight=None, criterion='gini',
+            max_depth=25, max_features='auto', max_leaf_nodes=None,
+            min_impurity_decrease=0.0, min_impurity_split=None,
+            min_samples_leaf=1, min_samples_split=4,
+            min_weight_fraction_leaf=0.0, n_estimators=250, n_jobs=None,
+            oob_score=False, random_state=42, verbose=0, warm_start=False)
+
+final_model.fit(X_train, y_train)
+estimator = final_model.estimators_[1]
+target_name = pd.DataFrame(pd.get_dummies(data_train_final["category_label"]))
+
+export_graphviz(estimator, out_file="tree.dot", feature_names = X_train.columns, 
+                class_names = target_name.columns, rounded = True, proportion = False, 
+                precision = 2, filled = True)
+call(["dot", "-Tpng", "tree.dot", "-o", "tree.png"])
 
 ###############################################################################
 ######################### Explain model training ##############################
@@ -498,6 +592,9 @@ result = RF_classifier(X_train_3, y_train, X_test_3, y_test, "f1_macro", "Random
 
 import lime
 import lime.lime_tabular
+
+y_pred = result["y_pred"]
+y_pred_prob = result["y_pred_prob"]
 
 clf = []
 for clas in range(5):
@@ -507,6 +604,7 @@ for clas in range(5):
             min_samples_leaf=1, min_samples_split=4,
             min_weight_fraction_leaf=0.0, n_estimators=250, n_jobs=None,
             oob_score=False, random_state=42, verbose=0, warm_start=False).fit(X_train, y_train == clas))
+
 
 explainer = lime.lime_tabular.LimeTabularExplainer(X_train.values, feature_names = X_train.columns,
                                                    random_state=42)
@@ -521,7 +619,7 @@ def explain_row (clf, row, num_reasons = 15):
 
 def predict_explain(rf, X, score_cat, num_reasons = 15):
     pred_ex = X[[]]
-    pred_ex[score_cat] = rf.predict_proba(X)[:,1]
+    #pred_ex[score_cat] = rf.predict_proba(X)[:,1]
     cols = zip(
             *X.apply(
                     lambda x: explain_row(rf, x, num_reasons), axis = 1, raw = True))
@@ -530,18 +628,22 @@ def predict_explain(rf, X, score_cat, num_reasons = 15):
     
     return pred_ex
 
-y_pred = result["y_pred"]
-explain_cat0 = predict_explain(clf[0], X_test).assign(PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
-                    "SCORE", ascending = False)
+explain_cat0 = predict_explain(clf[0], X_test, "SCORE_CAT_0").assign(
+        SCORE_CAT_0 = y_pred_prob[:,0], PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
+                "SCORE_CAT_0", ascending = False)
 
-explain_cat1 = predict_explain(clf[1], X_test).assign(PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
-                    "SCORE", ascending = False)
+explain_cat1 = predict_explain(clf[1], X_test, "SCORE_CAT_1").assign(
+        SCORE_CAT_1 = y_pred_prob[:,1], PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
+                    "SCORE_CAT_1", ascending = False)
 
-explain_cat2 = predict_explain(clf[2], X_test).assign(PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
-                    "SCORE", ascending = False)
+explain_cat2 = predict_explain(clf[2], X_test, "SCORE_CAT_2").assign(
+        SCORE_CAT_2 = y_pred_prob[:,2], PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
+                    "SCORE_CAT_2", ascending = False)
 
-explain_cat3 = predict_explain(clf[3], X_test).assign(PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
-                    "SCORE", ascending = False)
+explain_cat3 = predict_explain(clf[3], X_test, "SCORE_CAT_3").assign(
+        SCORE_CAT_3 = y_pred_prob[:,3], PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
+                    "SCORE_CAT_3", ascending = False)
 
-explain_cat4 = predict_explain(clf[4], X_test).assign(PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
-                    "SCORE", ascending = False)
+explain_cat4 = predict_explain(clf[4], X_test, "SCORE_CAT_4").assign(
+        SCORE_CAT_4 = y_pred_prob[:,4], PRED_CLASS = y_pred, TRUE_CLASS = y_test).sort_values(
+                    "SCORE_CAT_4", ascending = False)

@@ -283,8 +283,8 @@ def tsne_plot(dataset, labels, perplexity):
     plt.title("T-SNE with perplexity = {} and n_iter = 5000".format(perplexity), fontsize=15)
     plt.show()
     
-tsne_df = tsne(X_pre, y, 50)
-tsne_plot(tsne_df, y, 50)
+tsne_df = tsne(X, y, 100)
+tsne_plot(tsne_df, y, 100)
 
 ###############################################################################
 ##################### Model training and evaluation ###########################
@@ -308,7 +308,7 @@ from sklearn.model_selection import cross_validate
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.model_selection import TimeSeriesSplit, GridSearchCV, RandomizedSearchCV
 
-def get_RandSearchCV(X_train, y_train, X_test, y_test, scoring, type_search):
+def get_RandSearchCV(X_train, y_train, X_test, y_test, scoring, type_search, output_file):
     from sklearn.model_selection import TimeSeriesSplit
     from datetime import datetime as dt 
     st_t = dt.now()
@@ -357,14 +357,16 @@ def get_RandSearchCV(X_train, y_train, X_test, y_test, scoring, type_search):
                                    n_jobs=-1)
     
     rsearch_cv.fit(X_train, y_train)
-    print("Best estimator obtained from CV data: \n", rsearch_cv.best_estimator_)
-    print("Best Score: ", rsearch_cv.best_score_)
+    #f = open("output.txt", "a")
+    print("Best estimator obtained from CV data: \n", rsearch_cv.best_estimator_, file=output_file)
+    print("Best Score: ", rsearch_cv.best_score_, file=output_file)
     return rsearch_cv
 
-def performance_rand(best_clf, X_train, y_train, X_test, y_test, type_search):
+def performance_rand(best_clf, X_train, y_train, X_test, y_test, type_search, output_file):
+    #f = open("output.txt", "a")
     print("-"*100)
-    print("~~~~~~~~~~~~~~~~~~ PERFORMANCE EVALUATION ~~~~~~~~~~~~~~~~~~~~~~~~")
-    print("Detailed report for the {} algorithm".format(type_search))
+    print("~~~~~~~~~~~~~~~~~~ PERFORMANCE EVALUATION ~~~~~~~~~~~~~~~~~~~~~~~~", file=output_file)
+    print("Detailed report for the {} algorithm".format(type_search), file=output_file)
     
     y_pred = best_clf.predict(X_test)
     y_pred_prob = best_clf.predict_proba(X_test)
@@ -372,25 +374,25 @@ def performance_rand(best_clf, X_train, y_train, X_test, y_test, type_search):
     test_accuracy = accuracy_score(y_test, y_pred, normalize=True) * 100
     points = accuracy_score(y_test, y_pred, normalize=False)
     print("The number of accurate predictions out of {} data points on unseen data is {}".format(
-            X_test.shape[0], points))
+            X_test.shape[0], points), file=output_file)
     print("Accuracy of the {} model on unseen data is {}".format(
-            type_search, np.round(test_accuracy, 2)))
+            type_search, np.round(test_accuracy, 2)), file=output_file)
     
     print("Precision of the {} model on unseen data is {}".format(
-            type_search, np.round(metrics.precision_score(y_test, y_pred, average="macro"), 4)))
+            type_search, np.round(metrics.precision_score(y_test, y_pred, average="macro"), 4)), file=output_file)
     print("Recall of the {} model on unseen data is {}".format(
-           type_search, np.round(metrics.recall_score(y_test, y_pred, average="macro"), 4)))
+           type_search, np.round(metrics.recall_score(y_test, y_pred, average="macro"), 4)), file=output_file)
     print("F1 score of the {} model on unseen data is {}".format(
-            type_search, np.round(metrics.f1_score(y_test, y_pred, average="macro"), 4)))
+            type_search, np.round(metrics.f1_score(y_test, y_pred, average="macro"), 4)), file=output_file)
     
-    print("\nClassification report for {} model: \n".format(type_search))
-    print(metrics.classification_report(y_test, y_pred))
+    print("\nClassification report for {} model: \n".format(type_search), file=output_file)
+    print(metrics.classification_report(y_test, y_pred), file=output_file)
     
     plt.figure(figsize=(12,12))
     cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
     cnf_matrix_norm = cnf_matrix.astype('float') / cnf_matrix.sum(axis=1)[:, np.newaxis]
-    print("\nThe Confusion Matrix: \n")
-    print(cnf_matrix)
+    print("\nThe Confusion Matrix: \n", file=output_file)
+    print(cnf_matrix, file=output_file)
     """
     cmap = plt.cm.Blues
     plt.imshow(cnf_matrix, interpolation="nearest", cmap=cmap)
@@ -457,19 +459,20 @@ def performance_rand(best_clf, X_train, y_train, X_test, y_test, type_search):
             "y_pred": y_pred,
             "y_pred_prob": y_pred_prob}
 
-def RF_classifier(X_train, y_train, X_test, y_test, scoring, type_search):
+def RF_classifier(X_train, y_train, X_test, y_test, scoring, type_search, output_file):
+    #f = open("output.txt", "a")
     print("*"*100)
     print("Starting {} steps with {} for evaluation rules...".format(type_search, scoring))
     print("*"*100)
     
-    rsearch_cv = get_RandSearchCV(X_train, y_train, X_test, y_test, scoring, type_search)
+    rsearch_cv = get_RandSearchCV(X_train, y_train, X_test, y_test, scoring, type_search, output_file)
     
     best_estimator = rsearch_cv.best_estimator_
     max_depth = rsearch_cv.best_estimator_.max_depth
     n_estimators = rsearch_cv.best_estimator_.n_estimators
-    var_imp_rf = performance_rand(best_estimator, X_train, y_train, X_test, y_test, type_search)
+    var_imp_rf = performance_rand(best_estimator, X_train, y_train, X_test, y_test, type_search, output_file)
     
-    print("\n~~~~~~~~~~~~~ Features ranking and ploting ~~~~~~~~~~~~~~~~~~~~~\n")
+    print("\n~~~~~~~~~~~~~ Features ranking and ploting ~~~~~~~~~~~~~~~~~~~~~\n", file=output_file)
     
     importances_rf = var_imp_rf["importance"]
     indices_rf = var_imp_rf["index"]
@@ -478,7 +481,7 @@ def RF_classifier(X_train, y_train, X_test, y_test, scoring, type_search):
     feature_tab = pd.DataFrame({"Features" : list(X_train.columns),
                                 "Importance": importances_rf})
     feature_tab = feature_tab.sort_values("Importance", ascending = False).reset_index(drop=True)
-    print(feature_tab)
+    print(feature_tab, file=output_file)
     
     index = np.arange(len(X_train.columns))
     importance_desc = sorted(importances_rf)
@@ -523,7 +526,10 @@ y = data_train["category_class"]
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42) 
 
-result = RF_classifier(X_train, y_train, X_test, y_test, "f1_macro", "RandomSearchCV-RandomForest")
+f = open("output.txt", "a")
+result = RF_classifier(X_train, y_train, X_test, y_test, "f1_macro", "RandomSearchCV-RandomForest", f)
+f.close()
+
 result = RF_classifier(X_train, y_train, X_test, y_test, "f1_macro", "RandomSearchCV-GradientBoosting")
 
 """

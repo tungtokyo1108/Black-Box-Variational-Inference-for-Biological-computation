@@ -8,8 +8,16 @@ import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics;
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.mllib.util.MLUtils;
 import org.apache.spark.api.java.JavaSparkContext;
+
+// Random Forest 
 import org.apache.spark.mllib.tree.RandomForest;
 import org.apache.spark.mllib.tree.model.RandomForestModel;
+
+// Gradient Boosting Machine 
+import org.apache.spark.mllib.tree.GradientBoostedTrees;
+import org.apache.spark.mllib.tree.configuration.BoostingStrategy;
+import org.apache.spark.mllib.tree.model.GradientBoostedTreesModel;
+import org.apache.spark.mllib.util.MLUtils;
 
 // $example on$
 import java.util.Arrays;

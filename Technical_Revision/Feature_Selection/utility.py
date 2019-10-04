@@ -9,6 +9,11 @@ Created on Tue Oct  1 11:51:50 2019
 import numpy as np
 import pandas as pd
 from numpy import linalg as LA
+import scipy.spatial as ss
+from scipy.special import digamma
+from math import log
+import numpy.random as nr 
+import random
 
 
 ###############################################################################
@@ -50,6 +55,20 @@ def construct_label_matrix(label_1D):
     
     return label_matrix
 
+def euclidean_projection(V, n_features, n_classes, z, gamma):
+    
+    W_projection = np.zeros((n_features, n_classes))
+    
+    for i in range(n_features):
+        if LA.norm(V[i, :]) > z/gamma:
+            W_projection[i, :] = (1 - z/(gamma*LA.norm(V[i, :])))*V[i, :]
+        else:
+            W_projection[i, :] = np.zeros(n_classes)
+            
+    return W_projection
+
+
+
 ###############################################################################
 ############################# Test Function ###################################
 ###############################################################################
@@ -59,47 +78,3 @@ categories = pd.read_csv("Data_test/Clinical_categories.csv")
 
     
 test_label_matrix = construct_label_matrix(categories)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

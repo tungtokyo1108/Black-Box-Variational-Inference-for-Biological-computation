@@ -6,3 +6,4 @@ type I diabetes (T1D), ulcerative colitis (UC)
 
 ## Jupyter view
 - [Machine_learning_human_disease](https://nbviewer.jupyter.org/github/tungtokyo1108/My-Project--A-new-era-of-modern-analysis-for-Big-Data/blob/master/Data_Science_for_Medicine/Human_diseases/Machine_learning_human_disease.ipynb) 
+- [Statistical_analysis_human_disease](https://nbviewer.jupyter.org/github/tungtokyo1108/My-Project--A-new-era-of-modern-analysis-for-Big-Data/blob/master/Data_Science_for_Medicine/Human_diseases/Statistical_analysis_human_disease.ipynb)

@@ -11,6 +11,9 @@ totaling 1014 cells, which is more than 10-fold the number of eukaryotic human c
 nutrition via metabolism, the intestinal microbiota affects the human body by controlling epithelial proliferation and differentiation, influencing the development of the immune system and
 protecting against pathogens.
 
+### Jupyter view
+[Statistical_Marker_Analysis](https://nbviewer.jupyter.org/github/tungtokyo1108/My-Project--A-new-era-of-modern-analysis-for-Big-Data/blob/master/Data_Science_for_Medicine/Human_diseases/Cancer_disease/Marker_Analysis.ipynb)
+
 ### References 
 - Jemal A, Bray F, Center MM, Ferlay J, Ward E, Forman D. (2011). Global cancer statistics. CA Cancer J Clin 61: 69–90.
 - Bingham SA. (2000). Diet and colorectal cancer prevention. Biochem Soc Trans 28: 12–16.
